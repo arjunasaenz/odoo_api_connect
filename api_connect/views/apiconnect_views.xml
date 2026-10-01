@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_apiconnect_config_form" model="ir.ui.view">
+        <field name="name">api.connect.config.form</field>
+        <field name="model">api.connect.config</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_test_connection" type="object" string="Probar conexión" class="btn-primary" icon="fa-plug"/>
+                    <button name="action_sync_terminals" type="object" string="Sincronizar terminales" icon="fa-refresh"/>
+                    <button name="action_register_webhook" type="object" string="Registrar webhook en API Connect" class="btn-secondary" icon="fa-bell"/>
+                    <button name="action_rotate_webhook_secret" type="object" string="Rotar secret del webhook" icon="fa-key"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>API Connect</h1>
+                    </div>
+                    <group>
+                        <group name="apiconnect_creds" string="Conexión">
+                            <field name="base_url" placeholder="https://api-connect.rentipsolution.com"/>
+                            <field name="username"/>
+                            <field name="password" password="True"/>
+                        </group>
+                        <group name="apiconnect_webhook" string="Webhook">
+                            <field name="webhook_url_display" readonly="1"/>
+                            <field name="webhook_secret" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_apiconnect_config" model="ir.actions.server">
+        <field name="name">Configuración API Connect</field>
+        <field name="model_id" ref="api_connect.model_api_connect_config"/>
+        <field name="state">code</field>
+        <field name="code">action = model.action_open_config()</field>
+    </record>
+
+    <record id="view_apiconnect_terminal_list" model="ir.ui.view">
+        <field name="name">api.connect.terminal.list</field>
+        <field name="model">api.connect.terminal</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <header>
+                    <button name="action_sync_from_api" type="object" string="Sincronizar desde API Connect" class="btn-primary"/>
+                    <button name="action_create_in_api" type="object" string="Crear seleccionadas en API Connect"/>
+                </header>
+                <field name="name"/>
+                <field name="sn"/>
+                <field name="brand"/>
+                <field name="model"/>
+                <field name="tz"/>
+                <field name="online" widget="boolean" decoration-success="online" decoration-muted="not online"/>
+                <field name="last_sync"/>
+                <field name="expire_day"/>
+                <field name="api_id" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_apiconnect_terminal_form" model="ir.ui.view">
+        <field name="name">api.connect.terminal.form</field>
+        <field name="model">api.connect.terminal</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_create_in_api" type="object" string="Crear en API Connect" class="btn-primary" icon="fa-cloud-upload" invisible="api_id"/>
+                    <button name="action_sync_from_api" type="object" string="Sincronizar" icon="fa-refresh"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Registrada en API" bg="success" invisible="not api_id"/>
+                    <group>
+                        <group name="terminal_main" string="Terminal">
+                            <field name="name"/>
+                            <field name="sn"/>
+                            <field name="brand"/>
+                            <field name="model"/>
+                            <field name="tz"/>
+                        </group>
+                        <group name="terminal_hk" string="Hikvision" invisible="brand != 'HK'">
+                            <field name="device_id" readonly="not api_id"/>
+                            <field name="device_key" password="True" readonly="not api_id"/>
+                        </group>
+                        <group name="terminal_state" string="Estado">
+                            <field name="api_id" readonly="1"/>
+                            <field name="online" readonly="1"/>
+                            <field name="last_sync" readonly="1"/>
+                            <field name="auto_renew" readonly="1"/>
+                            <field name="expire_day" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_apiconnect_terminal_search" model="ir.ui.view">
+        <field name="name">api.connect.terminal.search</field>
+        <field name="model">api.connect.terminal</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="sn"/>
+                <filter string="En línea" name="online" domain="[('online', '=', True)]"/>
+                <filter string="Fuera de línea" name="offline" domain="[('online', '=', False)]"/>
+                <group expand="0" string="Marca">
+                    <filter string="ZKTeco" name="brand_zk" domain="[('brand', '=', 'ZK')]"/>
+                    <filter string="Hikvision" name="brand_hk" domain="[('brand', '=', 'HK')]"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_apiconnect_terminal" model="ir.actions.act_window">
+        <field name="name">Terminales</field>
+        <field name="res_model">api.connect.terminal</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="view_apiconnect_event_list" model="ir.ui.view">
+        <field name="name">api.connect.event.list</field>
+        <field name="model">api.connect.event</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="received_at"/>
+                <field name="timestamp_local"/>
+                <field name="sn"/>
+                <field name="pin"/>
+                <field name="employee_id"/>
+                <field name="direction"/>
+                <field name="state" decoration-success="state == 'processed'" decoration-warning="state == 'unmatched'" decoration-danger="state == 'error'"/>
+                <field name="attendance_id"/>
+                <field name="note" optional="hide"/>
+                <field name="event_id" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_apiconnect_event_search" model="ir.ui.view">
+        <field name="name">api.connect.event.search</field>
+        <field name="model">api.connect.event</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="pin"/>
+                <field name="sn"/>
+                <field name="employee_id"/>
+                <filter string="Procesadas" name="state_processed" domain="[('state', '=', 'processed')]"/>
+                <filter string="Sin empleado/terminal" name="state_unmatched" domain="[('state', '=', 'unmatched')]"/>
+                <filter string="Con error" name="state_error" domain="[('state', '=', 'error')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_apiconnect_event" model="ir.actions.act_window">
+        <field name="name">Marcaciones recibidas</field>
+        <field name="res_model">api.connect.event</field>
+        <field name="view_mode">list</field>
+    </record>
+
+    <menuitem id="menu_apiconnect_root" name="API Connect" sequence="70" groups="api_connect.group_apiconnect_user"/>
+    <menuitem id="menu_apiconnect_terminal" name="Terminales" parent="menu_apiconnect_root" action="action_apiconnect_terminal" sequence="10"/>
+    <menuitem id="menu_apiconnect_event" name="Marcaciones recibidas" parent="menu_apiconnect_root" action="action_apiconnect_event" sequence="20"/>
+    <menuitem id="menu_apiconnect_config" name="Configuración" parent="menu_apiconnect_root" action="action_apiconnect_config" sequence="30" groups="api_connect.group_apiconnect_manager"/>
+</odoo>
