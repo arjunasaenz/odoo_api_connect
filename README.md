@@ -37,9 +37,13 @@ sistema `api_connect.web_base_url` (Ajustes → Técnico → Parámetros del sis
   tarjeta* (usa el badge del empleado), *Registrar rostro* (envía la foto de la
   ficha al terminal vía biophoto) o *Eliminar de terminales*.
 - **Marcaciones**: menú *Marcaciones recibidas* muestra cada evento con su
-  estado (procesada / repetida / sin empleado / inválida / error) y la
-  marcación creada. Las de estado *sin empleado* se pueden **Reprocesar**
-  (selección + botón) una vez asignado el PIN en el empleado.
+  estado: *Procesada* (creó/cerró asistencia), *Repetida* (dentro de la ventana
+  anti-repetición), *Sin empleado con ese PIN* (asigne el PIN y use
+  **Reprocesar**), *Terminal desconocida* (SN no está en Odoo), *Fuera de
+  secuencia* (hora del punch anterior al turno abierto; revise el reloj del
+  terminal), *Salida suelta* (salida sin turno abierto) o *Inválida / Error*.
+  Las de *Sin empleado con ese PIN* se rescatan con el botón **Reprocesar**
+  (selección) una vez asignado el PIN.
 
 ## Anti-repetición
 

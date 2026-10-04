@@ -136,7 +136,7 @@
                 <field name="pin"/>
                 <field name="employee_id"/>
                 <field name="direction"/>
-                <field name="state" decoration-success="state == 'processed'" decoration-warning="state == 'unmatched'" decoration-danger="state == 'error'" decoration-muted="state == 'repeated'"/>
+                <field name="state" decoration-success="state == 'processed'" decoration-warning="state in ['no_employee', 'no_terminal', 'unmatched']" decoration-danger="state == 'error'" decoration-muted="state in ['repeated', 'stale', 'loose_out', 'invalid']"/>
                 <field name="attendance_id"/>
                 <field name="note" optional="hide"/>
                 <field name="event_id" optional="hide"/>
@@ -154,7 +154,9 @@
                 <field name="employee_id"/>
                 <filter string="Procesadas" name="state_processed" domain="[('state', '=', 'processed')]"/>
                 <filter string="Repetidas" name="state_repeated" domain="[('state', '=', 'repeated')]"/>
-                <filter string="Sin empleado/terminal" name="state_unmatched" domain="[('state', '=', 'unmatched')]"/>
+                <filter string="Sin empleado con ese PIN" name="state_no_employee" domain="[('state', '=', 'no_employee')]"/>
+                <filter string="Terminal desconocida" name="state_no_terminal" domain="[('state', '=', 'no_terminal')]"/>
+                <filter string="Descartadas" name="state_discarded" domain="[('state', 'in', ['stale', 'loose_out', 'invalid'])]"/>
                 <filter string="Con error" name="state_error" domain="[('state', '=', 'error')]"/>
             </search>
         </field>

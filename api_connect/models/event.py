@@ -34,6 +34,13 @@ def _parse_timestamp(date_s, time_s, tz_name):
     return local.astimezone(pytz.utc).replace(tzinfo=None)
 
 
+def _fmt_local(dt_utc_naive, tz_name):
+    tz = pytz.timezone(tz_name or "UTC")
+    return (
+        dt_utc_naive.replace(tzinfo=pytz.utc).astimezone(tz).strftime("%d/%m %H:%M:%S")
+    )
+
+
 class ApiConnectEvent(models.Model):
     _name = "api.connect.event"
     _description = "API Connect - Marcación recibida"
@@ -60,7 +67,11 @@ class ApiConnectEvent(models.Model):
         [
             ("processed", "Procesada"),
             ("repeated", "Repetida"),
-            ("unmatched", "Sin empleado/terminal"),
+            ("no_employee", "Sin empleado con ese PIN"),
+            ("no_terminal", "Terminal desconocida"),
+            ("unmatched", "Sin vincular (histórico)"),
+            ("stale", "Fuera de secuencia"),
+            ("loose_out", "Salida suelta"),
             ("invalid", "Inválida"),
             ("error", "Error"),
         ],
@@ -160,12 +171,18 @@ class ApiConnectEvent(models.Model):
             raise
 
         if not terminal or not employee:
-            event.write({
-                "state": "unmatched",
-                "note": "" if terminal else "terminal desconocida",
-                "employee_id": employee.id if employee else False,
-            })
-            return {"status": 200, "result": "unmatched"}
+            if not terminal:
+                note = "La terminal con serie '%s' no está registrada en Odoo. Sincrónicela y use Reprocesar." % sn
+                if not employee:
+                    note += " Además, no existe ningún empleado con el PIN '%s'." % pin
+                event.write({"state": "no_terminal", "note": note})
+            else:
+                event.write({
+                    "state": "no_employee",
+                    "note": "No existe ningún empleado con el PIN '%s'. "
+                            "Asigne apiconnect_pin y use Reprocesar." % pin,
+                })
+            return {"status": 200, "result": "unlinked"}
 
         window = self._punch_window_minutes()
         if self._is_repeated(employee, timestamp_local, window):
@@ -178,20 +195,24 @@ class ApiConnectEvent(models.Model):
 
         try:
             with self.env.cr.savepoint():
-                attendance = event._apply_attendance(employee, timestamp_local, direction)
+                attendance, failure = event._apply_attendance(
+                    employee, timestamp_local, direction
+                )
                 if attendance:
                     event.write({
                         "state": "processed",
                         "employee_id": employee.id,
                         "attendance_id": attendance.id,
+                        "note": False,
                     })
                 else:
+                    code, open_check_in = failure
                     event.write({
-                        "state": "unmatched",
-                        "note": "sin turno abierto para registrar salida",
+                        "state": code,
                         "employee_id": employee.id,
+                        "note": event._discard_note(code, open_check_in, terminal.tz, timestamp_local),
                     })
-            return {"status": 200, "result": "ok"}
+            return {"status": 200, "result": "ok" if attendance else "discarded"}
         except ValidationError as exc:
             event.write({"state": "invalid", "note": str(exc), "employee_id": employee.id})
             return {"status": 200, "result": "invalid"}
@@ -210,14 +231,32 @@ class ApiConnectEvent(models.Model):
             if ts_utc > open_record.check_in:
                 open_record.write({"check_out": ts_utc})
             else:
-                return None
+                return None, ("stale", open_record.check_in)
         if direction == "out":
-            return open_record if open_record else None
+            if open_record:
+                return open_record, None
+            return None, ("loose_out", None)
         if direction in ("in", "auto"):
             if open_record and ts_utc <= open_record.check_in:
-                return None
-            return Attendance.create({"employee_id": employee.id, "check_in": ts_utc})
-        return None
+                return None, ("stale", open_record.check_in)
+            return Attendance.create({"employee_id": employee.id, "check_in": ts_utc}), None
+        return None, ("stale", None)
+
+    def _discard_note(self, code, open_check_in, tz_name, punch_ts):
+        if code == "stale":
+            if open_check_in:
+                return (
+                    "La marcación de las %s es ANTERIOR al inicio del turno abierto "
+                    "(%s). La marcación se descartó para no corromper la asistencia; "
+                    "revise el reloj del terminal."
+                    % (_fmt_local(punch_ts, tz_name), _fmt_local(open_check_in, tz_name))
+                )
+            return "Dirección no reconocida en la marcación de las %s." % _fmt_local(
+                punch_ts, tz_name
+            )
+        if code == "loose_out":
+            return "Salida recibida sin un turno abierto a quién cerrar."
+        return "Marcación descartada."
 
     def _attendance_between(self, employee, start_ts, end_ts):
         return bool(
@@ -229,11 +268,14 @@ class ApiConnectEvent(models.Model):
         )
 
     def action_reprocess(self):
-        events = self.filtered(lambda e: e.state == "unmatched")
+        events = self.filtered(
+            lambda e: e.state in ("unmatched", "no_employee", "stale")
+        )
         window = self._punch_window_minutes()
         processed = 0
         repeated = 0
-        unmatched = 0
+        no_employee = 0
+        discarded = 0
 
         by_pin = {}
         for ev in events:
@@ -244,7 +286,13 @@ class ApiConnectEvent(models.Model):
                 [("apiconnect_pin", "=", pin)], limit=1
             )
             if not employee:
-                unmatched += len(evs)
+                for ev in evs:
+                    ev.write({
+                        "state": "no_employee",
+                        "note": "No existe ningún empleado con el PIN '%s'. "
+                                "Asigne apiconnect_pin y use Reprocesar." % pin,
+                    })
+                no_employee += len(evs)
                 continue
 
             evs.sort(key=lambda e: e.timestamp_local or e.received_at)
@@ -259,19 +307,20 @@ class ApiConnectEvent(models.Model):
                 ("timestamp_local", "<", evs[0].timestamp_local),
             ], order="timestamp_local desc", limit=1)
             prev_ts = prior.timestamp_local if prior else None
+            tzs = evs[0].terminal_id.tz if evs and evs[0].terminal_id else None
 
             sessions = []
             cur_in_ts = None
             cur_in_event = None
             pin_proc = 0
             pin_rep = 0
-            pin_unm = 0
+            pin_disc = 0
             deferred = []
 
             for ev in evs:
                 ts = ev.timestamp_local
                 if ts is None:
-                    pin_unm += 1
+                    pin_disc += 1
                     continue
                 if window and prev_ts and (ts - prev_ts) <= timedelta(minutes=window):
                     deferred.append((ev, "repeated", None))
@@ -289,8 +338,8 @@ class ApiConnectEvent(models.Model):
                     pin_rep += 1
                     continue
                 elif ev.direction == "out":
-                    deferred.append((ev, "skip", "Salida sin turno abierto"))
-                    pin_unm += 1
+                    deferred.append((ev, "loose_out", "Salida recibida sin un turno abierto a quien cerrar."))
+                    pin_disc += 1
                 else:
                     cur_in_ts = ts
                     cur_in_event = ev
@@ -305,8 +354,8 @@ class ApiConnectEvent(models.Model):
                     sessions.append(("OPEN", cur_in_event, cur_in_ts))
                     pin_proc += 1
                 else:
-                    deferred.append((cur_in_event, "invalid", "No se puede emparejar con el turno abierto actual"))
-                    pin_unm += 1
+                    deferred.append((cur_in_event, "stale", "La marcacion de las %s llega despues del inicio del turno abierto (%s) y ya existe otra sesion en ese intervalo; no se puede emparejar." % (_fmt_local(cur_in_ts, tzs), _fmt_local(live_open.check_in, tzs))))
+                    pin_disc += 1
 
             try:
                 with self.env.cr.savepoint():
@@ -355,19 +404,17 @@ class ApiConnectEvent(models.Model):
                                 "employee_id": employee.id,
                                 "note": "Repetida dentro de la ventana anti-repetición (%s min)" % window,
                             })
-                        elif action == "invalid":
-                            ev.write({"state": "invalid", "employee_id": employee.id, "note": note})
                         else:
-                            ev.write({"state": "unmatched", "employee_id": employee.id, "note": note})
+                            ev.write({"state": action, "employee_id": employee.id, "note": note})
                 processed += pin_proc
                 repeated += pin_rep
-                unmatched += pin_unm
+                discarded += pin_disc
             except ValidationError as exc:
                 for ev in evs:
                     ev.write({"state": "invalid", "employee_id": employee.id, "note": str(exc)})
-                unmatched += len(evs)
+                discarded += len(evs)
 
         return self.env["api.connect.config"]._notify(
-            "Reprocesadas: %s · Repetidas: %s · Sin empleado: %s"
-            % (processed, repeated, unmatched)
+            "Reprocesadas: %s · Repetidas: %s · Sin empleado: %s · Descartadas: %s"
+            % (processed, repeated, no_employee, discarded)
         )
