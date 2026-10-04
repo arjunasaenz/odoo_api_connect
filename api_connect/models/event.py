@@ -1,6 +1,7 @@
-﻿import json
+import json
 import logging
 from datetime import datetime, timedelta
+from zlib import crc32
 
 import pytz
 from odoo import api, fields, models
@@ -141,6 +142,11 @@ class ApiConnectEvent(models.Model):
         if existing:
             return {"status": 200, "result": "duplicate"}
 
+        self.env.cr.execute(
+            "SELECT pg_advisory_xact_lock(%s)",
+            [crc32(("pin:%s" % pin).encode())],
+        )
+
         terminal = self.env["api.connect.terminal"].search([("sn", "=", sn)], limit=1)
         timestamp_local = _parse_timestamp(date_s, time_s, terminal.tz)
         if timestamp_local is None:
@@ -206,12 +212,23 @@ class ApiConnectEvent(models.Model):
                         "note": False,
                     })
                 else:
-                    code, open_check_in = failure
-                    event.write({
-                        "state": code,
-                        "employee_id": employee.id,
-                        "note": event._discard_note(code, open_check_in, terminal.tz, timestamp_local),
-                    })
+                    code, ctx = failure
+                    if code == "in_session":
+                        att = self.env["hr.attendance"].browse(ctx)
+                        event.write({
+                            "state": "repeated",
+                            "employee_id": employee.id,
+                            "note": "La marcación de las %s cae dentro del turno %s - %s: doble marcación."
+                                    % (_fmt_local(timestamp_local, terminal.tz),
+                                       _fmt_local(att.check_in, terminal.tz),
+                                       _fmt_local(att.check_out, terminal.tz)),
+                        })
+                    else:
+                        event.write({
+                            "state": code,
+                            "employee_id": employee.id,
+                            "note": event._discard_note(code, ctx, terminal.tz, timestamp_local),
+                        })
             return {"status": 200, "result": "ok" if attendance else "discarded"}
         except ValidationError as exc:
             event.write({"state": "invalid", "note": str(exc), "employee_id": employee.id})
@@ -222,7 +239,15 @@ class ApiConnectEvent(models.Model):
             return {"status": 500, "error": "error interno"}
 
     def _apply_attendance(self, employee, ts_utc, direction):
-        open_record = self.env["hr.attendance"].search(
+        Attendance = self.env["hr.attendance"]
+        containing = Attendance.search([
+            ("employee_id", "=", employee.id),
+            ("check_in", "<", ts_utc),
+            ("check_out", ">", ts_utc),
+        ], limit=1)
+        if containing:
+            return None, ("in_session", containing.id)
+        open_record = Attendance.search(
             [("employee_id", "=", employee.id), ("check_out", "=", False)],
             limit=1,
         )
@@ -321,6 +346,18 @@ class ApiConnectEvent(models.Model):
                 ts = ev.timestamp_local
                 if ts is None:
                     pin_disc += 1
+                    continue
+                containing = Attendance.search([
+                    ("employee_id", "=", employee.id),
+                    ("check_in", "<", ts),
+                    ("check_out", ">", ts),
+                ], limit=1)
+                if containing:
+                    deferred.append((ev, "repeated", "La marcación de las %s cae dentro del turno %s - %s: doble marcación."
+                                     % (_fmt_local(ts, tzs),
+                                        _fmt_local(containing.check_in, tzs),
+                                        _fmt_local(containing.check_out, tzs))))
+                    pin_rep += 1
                     continue
                 if window and prev_ts and (ts - prev_ts) <= timedelta(minutes=window):
                     deferred.append((ev, "repeated", None))
