@@ -1,6 +1,6 @@
-import json
+﻿import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytz
 from odoo import api, fields, models
@@ -15,12 +15,6 @@ DIRECTION_MAP = {
     "1": "out",
     "2": "out",
     "5": "out",
-}
-
-DIRECTION_LABELS = {
-    "in": _("Entrada"),
-    "out": _("Salida"),
-    "auto": _("Automática"),
 }
 
 
@@ -65,6 +59,7 @@ class ApiConnectEvent(models.Model):
     state = fields.Selection(
         [
             ("processed", "Procesada"),
+            ("repeated", "Repetida"),
             ("unmatched", "Sin empleado/terminal"),
             ("invalid", "Inválida"),
             ("error", "Error"),
@@ -84,6 +79,32 @@ class ApiConnectEvent(models.Model):
             "Marcación duplicada (mismo ID de evento)",
         ),
     ]
+
+    @api.model
+    def _punch_window_minutes(self):
+        try:
+            return float(
+                self.env["api.connect.config"].sudo().get_singleton().punch_window_minutes
+                or 0.0
+            )
+        except Exception:
+            return 0.0
+
+    def _is_repeated(self, employee, ts_utc, window_minutes):
+        if not window_minutes or window_minutes <= 0:
+            return False
+        limit = ts_utc - timedelta(minutes=window_minutes)
+        return bool(
+            self.sudo().search(
+                [
+                    ("employee_id", "=", employee.id),
+                    ("state", "in", ("processed", "repeated")),
+                    ("timestamp_local", ">", limit),
+                    ("timestamp_local", "<=", ts_utc),
+                ],
+                limit=1,
+            )
+        )
 
     @api.model
     def process_webhook(self, payload):
@@ -146,6 +167,15 @@ class ApiConnectEvent(models.Model):
             })
             return {"status": 200, "result": "unmatched"}
 
+        window = self._punch_window_minutes()
+        if self._is_repeated(employee, timestamp_local, window):
+            event.write({
+                "state": "repeated",
+                "employee_id": employee.id,
+                "note": "Repetida dentro de la ventana anti-repetición (%s min)" % window,
+            })
+            return {"status": 200, "result": "repeated"}
+
         try:
             with self.env.cr.savepoint():
                 attendance = event._apply_attendance(employee, timestamp_local, direction)
@@ -188,3 +218,156 @@ class ApiConnectEvent(models.Model):
                 return None
             return Attendance.create({"employee_id": employee.id, "check_in": ts_utc})
         return None
+
+    def _attendance_between(self, employee, start_ts, end_ts):
+        return bool(
+            self.env["hr.attendance"].search_count([
+                ("employee_id", "=", employee.id),
+                ("check_in", ">", start_ts),
+                ("check_in", "<", end_ts),
+            ])
+        )
+
+    def action_reprocess(self):
+        events = self.filtered(lambda e: e.state == "unmatched")
+        window = self._punch_window_minutes()
+        processed = 0
+        repeated = 0
+        unmatched = 0
+
+        by_pin = {}
+        for ev in events:
+            by_pin.setdefault(ev.pin, []).append(ev)
+
+        for pin, evs in by_pin.items():
+            employee = self.env["hr.employee"].search(
+                [("apiconnect_pin", "=", pin)], limit=1
+            )
+            if not employee:
+                unmatched += len(evs)
+                continue
+
+            evs.sort(key=lambda e: e.timestamp_local or e.received_at)
+            Attendance = self.env["hr.attendance"]
+            live_open = Attendance.search(
+                [("employee_id", "=", employee.id), ("check_out", "=", False)],
+                limit=1,
+            )
+            prior = self.sudo().search([
+                ("employee_id", "=", employee.id),
+                ("state", "in", ("processed", "repeated")),
+                ("timestamp_local", "<", evs[0].timestamp_local),
+            ], order="timestamp_local desc", limit=1)
+            prev_ts = prior.timestamp_local if prior else None
+
+            sessions = []
+            cur_in_ts = None
+            cur_in_event = None
+            pin_proc = 0
+            pin_rep = 0
+            pin_unm = 0
+            deferred = []
+
+            for ev in evs:
+                ts = ev.timestamp_local
+                if ts is None:
+                    pin_unm += 1
+                    continue
+                if window and prev_ts and (ts - prev_ts) <= timedelta(minutes=window):
+                    deferred.append((ev, "repeated", None))
+                    pin_rep += 1
+                    prev_ts = ts
+                    continue
+                prev_ts = ts
+                if cur_in_ts and ts > cur_in_ts:
+                    sessions.append((cur_in_event, cur_in_ts, ev, ts))
+                    cur_in_ts = None
+                    cur_in_event = None
+                    pin_proc += 2
+                elif cur_in_ts and ts <= cur_in_ts:
+                    deferred.append((ev, "repeated", None))
+                    pin_rep += 1
+                    continue
+                elif ev.direction == "out":
+                    deferred.append((ev, "skip", "Salida sin turno abierto"))
+                    pin_unm += 1
+                else:
+                    cur_in_ts = ts
+                    cur_in_event = ev
+
+            if cur_in_event:
+                if live_open and cur_in_ts < live_open.check_in and not self._attendance_between(
+                    employee, cur_in_ts, live_open.check_in
+                ):
+                    sessions.append(("MERGE", cur_in_event, cur_in_ts))
+                    pin_proc += 1
+                elif not live_open:
+                    sessions.append(("OPEN", cur_in_event, cur_in_ts))
+                    pin_proc += 1
+                else:
+                    deferred.append((cur_in_event, "invalid", "No se puede emparejar con el turno abierto actual"))
+                    pin_unm += 1
+
+            try:
+                with self.env.cr.savepoint():
+                    for item in sessions:
+                        if item[0] == "MERGE":
+                            _, ev, ts = item
+                            live_open.write({"check_in": ts})
+                            ev.write({
+                                "state": "processed",
+                                "employee_id": employee.id,
+                                "attendance_id": live_open.id,
+                                "note": False,
+                            })
+                        elif item[0] == "OPEN":
+                            _, ev, ts = item
+                            att = Attendance.create({"employee_id": employee.id, "check_in": ts})
+                            ev.write({
+                                "state": "processed",
+                                "employee_id": employee.id,
+                                "attendance_id": att.id,
+                                "note": False,
+                            })
+                        else:
+                            ev_in, in_ts, ev_out, out_ts = item
+                            att = Attendance.create({
+                                "employee_id": employee.id,
+                                "check_in": in_ts,
+                                "check_out": out_ts,
+                            })
+                            ev_in.write({
+                                "state": "processed",
+                                "employee_id": employee.id,
+                                "attendance_id": att.id,
+                                "note": False,
+                            })
+                            ev_out.write({
+                                "state": "processed",
+                                "employee_id": employee.id,
+                                "attendance_id": att.id,
+                                "note": False,
+                            })
+                    for ev, action, note in deferred:
+                        if action == "repeated":
+                            ev.write({
+                                "state": "repeated",
+                                "employee_id": employee.id,
+                                "note": "Repetida dentro de la ventana anti-repetición (%s min)" % window,
+                            })
+                        elif action == "invalid":
+                            ev.write({"state": "invalid", "employee_id": employee.id, "note": note})
+                        else:
+                            ev.write({"state": "unmatched", "employee_id": employee.id, "note": note})
+                processed += pin_proc
+                repeated += pin_rep
+                unmatched += pin_unm
+            except ValidationError as exc:
+                for ev in evs:
+                    ev.write({"state": "invalid", "employee_id": employee.id, "note": str(exc)})
+                unmatched += len(evs)
+
+        return self.env["api.connect.config"]._notify(
+            "Reprocesadas: %s · Repetidas: %s · Sin empleado: %s"
+            % (processed, repeated, unmatched)
+        )

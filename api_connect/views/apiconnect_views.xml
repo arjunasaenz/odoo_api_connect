@@ -26,6 +26,9 @@
                             <field name="webhook_secret" readonly="1"/>
                         </group>
                     </group>
+                    <group string="Marcaciones">
+                        <field name="punch_window_minutes"/>
+                    </group>
                 </sheet>
             </form>
         </field>
@@ -124,13 +127,16 @@
         <field name="model">api.connect.event</field>
         <field name="arch" type="xml">
             <list>
+                <header>
+                    <button name="action_reprocess" type="object" string="Reprocesar seleccionadas" groups="api_connect.group_apiconnect_manager" confirm="¿Reprocesar las marcaciones seleccionadas? Se buscará de nuevo el empleado por su PIN."/>
+                </header>
                 <field name="received_at"/>
                 <field name="timestamp_local"/>
                 <field name="sn"/>
                 <field name="pin"/>
                 <field name="employee_id"/>
                 <field name="direction"/>
-                <field name="state" decoration-success="state == 'processed'" decoration-warning="state == 'unmatched'" decoration-danger="state == 'error'"/>
+                <field name="state" decoration-success="state == 'processed'" decoration-warning="state == 'unmatched'" decoration-danger="state == 'error'" decoration-muted="state == 'repeated'"/>
                 <field name="attendance_id"/>
                 <field name="note" optional="hide"/>
                 <field name="event_id" optional="hide"/>
@@ -147,6 +153,7 @@
                 <field name="sn"/>
                 <field name="employee_id"/>
                 <filter string="Procesadas" name="state_processed" domain="[('state', '=', 'processed')]"/>
+                <filter string="Repetidas" name="state_repeated" domain="[('state', '=', 'repeated')]"/>
                 <filter string="Sin empleado/terminal" name="state_unmatched" domain="[('state', '=', 'unmatched')]"/>
                 <filter string="Con error" name="state_error" domain="[('state', '=', 'error')]"/>
             </search>

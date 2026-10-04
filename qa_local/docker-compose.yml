@@ -1,0 +1,30 @@
+services:
+  qa_db:
+    image: postgres:16-alpine
+    container_name: qa_odoo_db
+    environment:
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+      POSTGRES_DB: postgres
+    volumes:
+      - qa_db_data:/var/lib/postgresql/data
+
+  qa_odoo:
+    image: odoo:18.0
+    container_name: qa_odoo
+    depends_on:
+      - qa_db
+    ports:
+      - "8069:8069"
+    environment:
+      HOST: qa_db
+      USER: odoo
+      PASSWORD: odoo
+    volumes:
+      - ../api_connect:/mnt/extra-addons/api_connect:ro
+      - ./odoo.conf:/etc/odoo/odoo.conf:ro
+      - qa_odoo_data:/var/lib/odoo
+
+volumes:
+  qa_db_data:
+  qa_odoo_data:

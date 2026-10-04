@@ -37,7 +37,16 @@ sistema `api_connect.web_base_url` (Ajustes → Técnico → Parámetros del sis
   tarjeta* (usa el badge del empleado), *Registrar rostro* (envía la foto de la
   ficha al terminal vía biophoto) o *Eliminar de terminales*.
 - **Marcaciones**: menú *Marcaciones recibidas* muestra cada evento con su
-  estado (procesada / sin empleado / inválida / error) y la marcación creada.
+  estado (procesada / repetida / sin empleado / inválida / error) y la
+  marcación creada. Las de estado *sin empleado* se pueden **Reprocesar**
+  (selección + botón) una vez asignado el PIN en el empleado.
+
+## Anti-repetición
+
+En *Configuración → Marcaciones* existe **Ventana anti-repetición (min)**:
+marcaciones del mismo empleado dentro de esa ventana se marcan como
+*Repetida* y no generan asistencia. Acepta fracciones (0.5 = 30 segundos).
+0 desactiva el control. La ventana se aplica también al reprocesar.
 
 ## Webhook
 
@@ -51,6 +60,23 @@ estado *sin empleado* y responden 200 para evitar bucles de reintentos.
 
 Odoo 17/18/19 con ajustes menores (manifest y `type='json'`→`type='jsonrpc'`
 en 19). Target principal: **Odoo 18**.
+
+## Pruebas locales (qa_local)
+
+`qa_local/docker-compose.yml` levanta Odoo 18 + PostgreSQL con el addon montado:
+
+```bash
+cd qa_local
+docker compose up -d
+```
+
+- URL: http://localhost:8069 — BD `apiconnect` — admin/admin
+- El módulo se instala por la UI: Apps → Update Apps List → API Connect → Activar
+- En *Configuración*, para apuntar a una API Connect corriendo en el host
+  Windows (dev, puerto 8777), usar `http://host.docker.internal:8777`
+  (dentro del contenedor `localhost` es el propio contenedor).
+- El webhook sale como `http://localhost:8069/api_connect/webhook`, alcanzable
+  desde la API corriendo en el host.
 
 ## Notas
 

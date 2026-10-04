@@ -1,14 +1,10 @@
-import logging
+﻿import logging
 from datetime import timedelta
 
 import pytz
 from dateutil import parser as dateutil_parser
-from odoo import api, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
-from odoo.tools.translate import _
-
-from .backend import ApiConnectConfig
-
 _logger = logging.getLogger(__name__)
 
 ONLINE_WINDOW_MINUTES = 15
@@ -50,11 +46,29 @@ class ApiConnectTerminal(models.Model):
     auto_renew = fields.Boolean(string="Auto-renovación", readonly=True)
     expire_day = fields.Date(string="Vence", readonly=True)
     last_sync = fields.Datetime(string="Última conexión", readonly=True)
-    online = fields.Boolean(string="En línea", compute="_compute_online")
+    online = fields.Boolean(
+        string="En línea",
+        compute="_compute_online",
+        search="_search_online",
+    )
 
     _sql_constraints = [
         ("sn_uniq", "unique(sn)", "El número de serie ya está registrado en Odoo"),
     ]
+
+    @api.model
+    def _search_online(self, operator, value):
+        if operator not in ("=", "!="):
+            operator = "="
+        want_online = (operator == "=") == bool(value)
+        limit = fields.Datetime.now() - timedelta(minutes=ONLINE_WINDOW_MINUTES)
+        if want_online:
+            return [("last_sync", ">=", limit)]
+        return [
+            "|",
+            ("last_sync", "<", limit),
+            ("last_sync", "=", False),
+        ]
 
     @api.depends("last_sync")
     def _compute_online(self):
@@ -77,7 +91,7 @@ class ApiConnectTerminal(models.Model):
 
     @api.model
     def action_sync_from_api(self):
-        client = ApiConnectConfig.get_client()
+        client = self.env["api.connect.config"].get_client()
         terminals = client.list_terminals()
         for item in terminals:
             if not item.get("sn"):
@@ -92,7 +106,7 @@ class ApiConnectTerminal(models.Model):
         )
 
     def action_create_in_api(self):
-        client = ApiConnectConfig.get_client()
+        client = self.env["api.connect.config"].get_client()
         for terminal in self:
             if terminal.api_id:
                 raise UserError(
@@ -145,7 +159,7 @@ class ApiConnectTerminal(models.Model):
     @api.model
     def _cron_heartbeat(self):
         try:
-            client = ApiConnectConfig.get_client()
+            client = self.env["api.connect.config"].get_client()
         except UserError:
             _logger.info("API Connect: heartbeat omitido, sin configuración")
             return

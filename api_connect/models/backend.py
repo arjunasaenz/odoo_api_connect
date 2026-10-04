@@ -4,9 +4,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import requests
-from odoo import api, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
-from odoo.tools.translate import _
 
 _logger = logging.getLogger(__name__)
 
@@ -191,6 +190,14 @@ class ApiConnectConfig(models.Model):
         copy=False,
         default=lambda self: secrets.token_urlsafe(32),
     )
+    punch_window_minutes = fields.Float(
+        string="Ventana anti-repetición (min)",
+        default=1.0,
+        digits=(14, 2),
+        help="Marcaciones del mismo empleado dentro de esta ventana se "
+             "registran como repetidas y no generan asistencia. Acepta "
+             "fracciones: 0.5 = 30 segundos. 0 = sin control.",
+    )
     webhook_url_display = fields.Char(
         string="URL del webhook en Odoo",
         compute="_compute_webhook_url_display",
@@ -269,7 +276,7 @@ class ApiConnectConfig(models.Model):
         resp = client.request("PUT", "/settings/", payload=payload)
         if resp.status_code == 404:
             resp = client.request("POST", "/settings/", payload=payload)
-        self.check(resp, (200, 201), "registrar el webhook")
+        client.check(resp, (200, 201), "registrar el webhook")
         return self._notify(_("Webhook registrado en API Connect: %s") % url)
 
     def action_rotate_webhook_secret(self):
