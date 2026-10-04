@@ -198,6 +198,13 @@ class ApiConnectConfig(models.Model):
              "registran como repetidas y no generan asistencia. Acepta "
              "fracciones: 0.5 = 30 segundos. 0 = sin control.",
     )
+    pairing_global = fields.Boolean(
+        string="Emparejamiento global",
+        default=False,
+        help="Si se activa, el ciclo entrada/salida se empareja con cualquier "
+             "terminal (se ignora el grupo). Si se desactiva, un turno solo "
+             "puede cerrarse desde el mismo grupo con el que abrió.",
+    )
     webhook_url_display = fields.Char(
         string="URL del webhook en Odoo",
         compute="_compute_webhook_url_display",
@@ -287,7 +294,32 @@ class ApiConnectConfig(models.Model):
             "warning",
         )
 
+    def sync_groups_api(self):
+        client = self._client()
+        resp = client.request("GET", "/terminal_group/", params={"skip": 0, "limit": 1000})
+        if resp.status_code == 404:
+            return 0
+        groups = client.check(resp, (200,), "listar grupos de terminales")
+        Group = self.env["api.connect.terminal.group"].sudo()
+        count = 0
+        for item in groups:
+            if not item.get("id"):
+                continue
+            existing = Group.search([("api_id", "=", str(item["id"]))], limit=1)
+            vals = {
+                "api_id": str(item["id"]),
+                "name": item.get("name") or str(item["id"]),
+                "description": item.get("description") or False,
+            }
+            if existing:
+                existing.write(vals)
+            else:
+                Group.create(vals)
+            count += 1
+        return count
+
     def action_sync_terminals(self):
         self.ensure_one()
+        self.sync_groups_api()
         self.env["api.connect.terminal"].action_sync_from_api()
         return self._notify(_("Terminales sincronizadas desde API Connect"))

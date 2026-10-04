@@ -70,6 +70,7 @@ class ApiConnectEvent(models.Model):
             ("repeated", "Repetida"),
             ("no_employee", "Sin empleado con ese PIN"),
             ("no_terminal", "Terminal desconocida"),
+            ("out_group", "Terminal de otro grupo"),
             ("unmatched", "Sin vincular (histórico)"),
             ("stale", "Fuera de secuencia"),
             ("loose_out", "Salida suelta"),
@@ -202,7 +203,7 @@ class ApiConnectEvent(models.Model):
         try:
             with self.env.cr.savepoint():
                 attendance, failure = event._apply_attendance(
-                    employee, timestamp_local, direction
+                    employee, timestamp_local, direction, terminal
                 )
                 if attendance:
                     event.write({
@@ -238,7 +239,17 @@ class ApiConnectEvent(models.Model):
             event.write({"state": "error", "note": "excepción al crear marcación", "employee_id": employee.id})
             return {"status": 500, "error": "error interno"}
 
-    def _apply_attendance(self, employee, ts_utc, direction):
+    def _same_scope(self, terminal, open_record):
+        config = self.env["api.connect.config"].sudo().get_singleton()
+        if config.pairing_global:
+            return True
+        if not open_record.apiconnect_terminal_in_id:
+            return True
+        if not terminal:
+            return False
+        return open_record.apiconnect_terminal_in_id.group_id == terminal.group_id
+
+    def _apply_attendance(self, employee, ts_utc, direction, terminal=None):
         Attendance = self.env["hr.attendance"]
         containing = Attendance.search([
             ("employee_id", "=", employee.id),
@@ -251,9 +262,11 @@ class ApiConnectEvent(models.Model):
             [("employee_id", "=", employee.id), ("check_out", "=", False)],
             limit=1,
         )
-        Attendance = self.env["hr.attendance"]
         if open_record:
+            same_scope = self._same_scope(terminal, open_record)
             if ts_utc > open_record.check_in:
+                if not same_scope:
+                    return None, ("out_group", open_record.apiconnect_terminal_in_id)
                 open_record.write({"check_out": ts_utc})
             else:
                 return None, ("stale", open_record.check_in)
@@ -263,12 +276,18 @@ class ApiConnectEvent(models.Model):
             return None, ("loose_out", None)
         if direction in ("in", "auto"):
             if open_record and ts_utc <= open_record.check_in:
+                if not self._same_scope(terminal, open_record):
+                    return None, ("out_group", open_record.apiconnect_terminal_in_id)
                 return None, ("stale", open_record.check_in)
-            return Attendance.create({"employee_id": employee.id, "check_in": ts_utc}), None
+            vals = {"employee_id": employee.id, "check_in": ts_utc}
+            if terminal:
+                vals["apiconnect_terminal_in_id"] = terminal.id
+            return Attendance.create(vals), None
         return None, ("stale", None)
 
-    def _discard_note(self, code, open_check_in, tz_name, punch_ts):
+    def _discard_note(self, code, ctx, tz_name, punch_ts):
         if code == "stale":
+            open_check_in = ctx
             if open_check_in:
                 return (
                     "La marcación de las %s es ANTERIOR al inicio del turno abierto "
@@ -279,6 +298,15 @@ class ApiConnectEvent(models.Model):
             return "Dirección no reconocida en la marcación de las %s." % _fmt_local(
                 punch_ts, tz_name
             )
+        if code == "out_group":
+            open_terminal = ctx
+            if open_terminal:
+                return (
+                    "La marcación llegó desde una terminal de OTRO grupo; el turno "
+                    "abierto corresponde a la terminal '%s' y solo puede cerrarse "
+                    "desde su mismo grupo. La marcación se ignoró." % open_terminal.name
+                )
+            return "La marcación llegó desde una terminal de otro grupo y se ignoró."
         if code == "loose_out":
             return "Salida recibida sin un turno abierto a quién cerrar."
         return "Marcación descartada."

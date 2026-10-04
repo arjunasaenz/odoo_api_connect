@@ -5,6 +5,18 @@ from odoo.exceptions import UserError
 _logger = logging.getLogger(__name__)
 
 
+class HrAttendance(models.Model):
+    _inherit = "hr.attendance"
+
+    apiconnect_terminal_in_id = fields.Many2one(
+        "api.connect.terminal",
+        string="Terminal de entrada",
+        readonly=True,
+        ondelete="set null",
+        help="Terminal desde la que se marcó la entrada (grupo propietario del ciclo)",
+    )
+
+
 class HrEmployee(models.Model):
     _inherit = "hr.employee"
 

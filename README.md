@@ -45,6 +45,20 @@ sistema `api_connect.web_base_url` (Ajustes → Técnico → Parámetros del sis
   Las de *Sin empleado con ese PIN* se rescatan con el botón **Reprocesar**
   (selección) una vez asignado el PIN.
 
+## Emparejamiento por grupos
+
+- Cada terminal pertenece a un **grupo** (sincronizado desde API Connect) o al
+  **grupo general** (terminales sin grupo).
+- Con *Emparejamiento global* desactivado (defecto): un turno abierto solo
+  puede cerrarse desde un terminal **del mismo grupo** con el que abrió; un
+  punch desde otro grupo se registra como *Terminal de otro grupo* sin tocar
+  la asistencia. Con un grupo de un solo terminal, entrada y salida forzosamente
+  son de ese dispositivo.
+- Con *Emparejamiento global* activado: cualquier terminal abre o cierra
+  (comportamiento anterior).
+- La asistencia guarda la **terminal de entrada** (campo *Terminal de entrada*
+  en hr.attendance) para conocer el grupo propietario del ciclo.
+
 ## Anti-repetición
 
 En *Configuración → Marcaciones* existe **Ventana anti-repetición (min)**:

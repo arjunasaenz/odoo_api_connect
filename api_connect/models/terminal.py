@@ -21,6 +21,21 @@ def _parse_date(value):
     return value
 
 
+class ApiConnectTerminalGroup(models.Model):
+    _name = "api.connect.terminal.group"
+    _description = "API Connect - Grupo de terminales"
+    _order = "name"
+
+    name = fields.Char(string="Nombre", required=True)
+    api_id = fields.Char(string="ID en API Connect", readonly=True, copy=False, index=True)
+    description = fields.Char(string="Descripción")
+    terminal_ids = fields.One2many("api.connect.terminal", "group_id", string="Terminales")
+
+    _sql_constraints = [
+        ("api_id_uniq", "unique(api_id)", "El grupo ya está sincronizado"),
+    ]
+
+
 class ApiConnectTerminal(models.Model):
     _name = "api.connect.terminal"
     _description = "API Connect - Terminal"
@@ -36,6 +51,19 @@ class ApiConnectTerminal(models.Model):
         required=True,
     )
     tz = fields.Char(string="Zona horaria")
+    group_id = fields.Many2one(
+        "api.connect.terminal.group",
+        string="Grupo de terminales",
+        help="Terminales del mismo grupo comparten el ciclo de entrada/salida. "
+             "Sin grupo quedan en el grupo general.",
+    )
+    api_group_id = fields.Char(
+        string="Grupo en API Connect",
+        readonly=True,
+        copy=False,
+        index=True,
+        help="UUID del grupo tal como viene de la API",
+    )
     api_id = fields.Char(string="ID en API Connect", readonly=True, copy=False, index=True)
     device_id = fields.Char(string="Device ID (Hikvision)", copy=False)
     device_key = fields.Char(
@@ -77,12 +105,20 @@ class ApiConnectTerminal(models.Model):
             terminal.online = bool(terminal.last_sync and terminal.last_sync > limit)
 
     def _sync_vals(self, item):
+        api_group = item.get("terminal_group_id")
+        group_record = False
+        if api_group:
+            group_record = self.env["api.connect.terminal.group"].search(
+                [("api_id", "=", str(api_group))], limit=1
+            )
         return {
             "name": item.get("name") or item.get("sn"),
             "sn": item.get("sn"),
             "model": item.get("model"),
             "brand": (item.get("brand") or "ZK").upper(),
             "tz": item.get("tz"),
+            "api_group_id": str(api_group) if api_group else False,
+            "group_id": group_record.id if group_record else False,
             "api_id": str(item.get("id") or ""),
             "device_id": item.get("device_id") or None,
             "auto_renew": bool(item.get("auto_renew")),
@@ -92,6 +128,7 @@ class ApiConnectTerminal(models.Model):
     @api.model
     def action_sync_from_api(self):
         client = self.env["api.connect.config"].get_client()
+        self.env["api.connect.config"].get_singleton().sync_groups_api()
         terminals = client.list_terminals()
         for item in terminals:
             if not item.get("sn"):

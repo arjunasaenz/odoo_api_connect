@@ -1,5 +1,7 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_api_connect_config_manager,api.connect.config manager,model_api_connect_config,api_connect.group_apiconnect_manager,1,1,1,1
+access_api_connect_group_user,api.connect.terminal.group user,model_api_connect_terminal_group,api_connect.group_apiconnect_user,1,0,0,0
+access_api_connect_group_manager,api.connect.terminal.group manager,model_api_connect_terminal_group,api_connect.group_apiconnect_manager,1,1,1,1
 access_api_connect_terminal_user,api.connect.terminal user,model_api_connect_terminal,api_connect.group_apiconnect_user,1,0,0,0
 access_api_connect_terminal_manager,api.connect.terminal manager,model_api_connect_terminal,api_connect.group_apiconnect_manager,1,1,1,1
 access_api_connect_event_user,api.connect.event user,model_api_connect_event,api_connect.group_apiconnect_user,1,0,0,0
