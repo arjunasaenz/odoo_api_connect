@@ -42,8 +42,8 @@ class ApiConnectClient:
     def _login(self):
         if not self.base_url or not self.username or not self.password:
             raise UserError(_(
-                "Complete la configuración de API Connect "
-                "(URL, usuario y contraseña) antes de continuar."
+                "Complete la configuraci?n de API Connect "
+                "(URL, usuario y contrase?a) antes de continuar."
             ))
         try:
             resp = requests.post(
@@ -60,7 +60,7 @@ class ApiConnectClient:
             )
         token = resp.json().get("access_token")
         if not token:
-            raise UserError(_("API Connect no devolvió un token de acceso"))
+            raise UserError(_("API Connect no devolvi? un token de acceso"))
         _TOKEN_CACHE[self.cache_key] = (token, _utcnow() + timedelta(minutes=TOKEN_TTL_MINUTES))
         return token
 
@@ -88,7 +88,7 @@ class ApiConnectClient:
             return self.request(method, path, payload=payload, params=params, retry_auth=False)
         return resp
 
-    def check(self, resp, ok_codes=(200, 201), context=""):
+    def check(self, resp, ok_codes=(200, 201), ctx_label=""):
         if resp.status_code in ok_codes:
             try:
                 return resp.json()
@@ -96,7 +96,7 @@ class ApiConnectClient:
                 return {}
         raise UserError(
             _("API Connect rechazó %s (%s): %s")
-            % (context or "la llamada", resp.status_code, self._detail(resp))
+            % (ctx_label or "la llamada", resp.status_code, self._detail(resp))
         )
 
     def list_terminals(self):
@@ -172,10 +172,167 @@ class ApiConnectClient:
             "foto %s en %s" % (pin, sn),
         )
 
+    def update_terminal(self, api_id, vals):
+        return self.check(
+            self.request("PUT", "/terminal/%s" % api_id, payload=vals),
+            (200, 201),
+            "actualizar terminal",
+        )
+
+    def terminal_parameters(self, api_id):
+        data = self.check(
+            self.request("GET", "/terminal/parameters/%s" % api_id),
+            (200,),
+            "par?metros de terminal",
+        )
+        if isinstance(data, list) and len(data) > 1 and isinstance(data[1], dict):
+            return data[1].get("parameters") or {}
+        return {}
+
+    def send_command(self, sn, cmd):
+        return self.check(
+            self.request("POST", "/terminal/command/%s" % sn, payload={"cmd": cmd}),
+            (200, 201),
+            "comando %s en %s" % (cmd, sn),
+        )
+
+    def unlock(self, sn, seconds=5):
+        return self.check(
+            self.request("POST", "/terminal/unlock/%s" % sn, payload={"unlock_time": seconds}),
+            (200, 201),
+            "desbloqueo en %s" % sn,
+        )
+
+    def open_door(self, sn, doors, seconds=None):
+        payload = {"access_door_number": doors}
+        if seconds:
+            payload["open_door_time"] = seconds
+        return self.check(
+            self.request("POST", "/terminal/door/open/%s" % sn, payload=payload),
+            (200, 201),
+            "abrir puerta en %s" % sn,
+        )
+
+    def hk_open_door(self, sn, doors, seconds=None):
+        payload = {"access_door_number": doors}
+        if seconds:
+            payload["open_door_time"] = seconds
+        return self.check(
+            self.request("POST", "/acc/access/door_open/%s" % sn, payload=payload),
+            (200, 201),
+            "abrir puerta HK en %s" % sn,
+        )
+
+    def set_door_settings(self, sn, payload, brand="ZK"):
+        if brand == "HK":
+            path = "/acc/access/door_settings/%s" % sn
+        else:
+            path = "/terminal/door/set_parameters/%s" % sn
+        return self.check(
+            self.request("POST", path, payload=payload),
+            (200, 201),
+            "configurar puerta en %s" % sn,
+        )
+
+    def hk_reset_access(self, sn):
+        return self.check(
+            self.request("POST", "/acc/access/reset_access/%s" % sn),
+            (200, 201),
+            "reset de acceso en %s" % sn,
+        )
+
+    def hk_factory_settings(self, sn):
+        return self.check(
+            self.request("POST", "/acc/access/factory_settings/%s/" % sn),
+            (200, 201),
+            "f?brica de puertas en %s" % sn,
+        )
+
+    def restore_factory(self, sn):
+        return self.check(
+            self.request("POST", "/terminal/restore_factory/%s" % sn),
+            (200, 201),
+            "restaurar f?brica %s" % sn,
+        )
+
+    def set_wiegand(self, sn, payload):
+        return self.check(
+            self.request("POST", "/terminal/wiegand_format/%s" % sn, payload=payload),
+            (200, 201),
+            "wiegand en %s" % sn,
+        )
+
+    def delete_wiegand(self, sn, payload):
+        return self.check(
+            self.request("DELETE", "/terminal/wiegand_format/%s" % sn, payload=payload),
+            (200, 201),
+            "borrar wiegand en %s" % sn,
+        )
+
+    def send_message(self, sn, payload):
+        return self.check(
+            self.request("POST", "/terminal/messages/%s" % sn, payload=payload),
+            (200, 201),
+            "mensaje en %s" % sn,
+        )
+
+    def send_message_user(self, sn, payload):
+        return self.check(
+            self.request("POST", "/terminal/messages/user/%s" % sn, payload=payload),
+            (200, 201),
+            "mensaje a usuario en %s" % sn,
+        )
+
+    def load_publicity(self, sn, payload):
+        return self.check(
+            self.request("POST", "/terminal/load_publicity_pictures/%s" % sn, payload=payload),
+            (200, 201),
+            "publicidad en %s" % sn,
+        )
+
+    def response_logs(self, sn, date_str):
+        resp = self.request("GET", "/audit/response/%s/%s" % (sn, date_str))
+        if resp.status_code == 404:
+            return []
+        data = self.check(resp, (200,), "respuestas de %s" % sn)
+        return data.get("responses") or []
+
+    def create_group(self, vals):
+        payload = dict(vals)
+        payload.setdefault("terminal_serials", [])
+        return self.check(
+            self.request("POST", "/terminal_group/", payload=payload),
+            (200, 201),
+            "crear grupo",
+        )
+
+    def update_group(self, api_id, vals):
+        return self.check(
+            self.request("PUT", "/terminal_group/%s" % api_id, payload=vals),
+            (200,),
+            "actualizar grupo",
+        )
+
+    def delete_group(self, api_id):
+        return self.check(
+            self.request("DELETE", "/terminal_group/%s" % api_id),
+            (200, 201),
+            "eliminar grupo",
+        )
+
+    def assign_terminal_group(self, sn, api_group_id):
+        return self.check(
+            self.request("PUT", "/terminal/group/%s" % sn, payload={
+                "terminal_group_id": api_group_id
+            }),
+            (200, 201),
+            "asignar %s a grupo" % sn,
+        )
+
 
 class ApiConnectConfig(models.Model):
     _name = "api.connect.config"
-    _description = "API Connect - Configuración"
+    _description = "API Connect - Configuraci?n"
     _order = "id"
 
     base_url = fields.Char(
@@ -183,7 +340,7 @@ class ApiConnectConfig(models.Model):
         default="https://api-connect.rentipsolution.com",
     )
     username = fields.Char(string="Usuario")
-    password = fields.Char(string="Contraseña")
+    password = fields.Char(string="Contrase?a")
     webhook_secret = fields.Char(
         string="Secret del webhook",
         readonly=True,
@@ -191,7 +348,7 @@ class ApiConnectConfig(models.Model):
         default=lambda self: secrets.token_urlsafe(32),
     )
     punch_window_minutes = fields.Float(
-        string="Ventana anti-repetición (min)",
+        string="Ventana anti-repetici?n (min)",
         default=1.0,
         digits=(14, 2),
         help="Marcaciones del mismo empleado dentro de esta ventana se "
@@ -203,7 +360,7 @@ class ApiConnectConfig(models.Model):
         default=False,
         help="Si se activa, el ciclo entrada/salida se empareja con cualquier "
              "terminal (se ignora el grupo). Si se desactiva, un turno solo "
-             "puede cerrarse desde el mismo grupo con el que abrió.",
+             "puede cerrarse desde el mismo grupo con el que abri?.",
     )
     webhook_url_display = fields.Char(
         string="URL del webhook en Odoo",
@@ -267,7 +424,7 @@ class ApiConnectConfig(models.Model):
         self.ensure_one()
         client = self._client()
         data = client.list_terminals()
-        return self._notify(_("Conexión correcta. Terminales visibles: %s") % len(data))
+        return self._notify(_("Conexi?n correcta. Terminales visibles: %s") % len(data))
 
     def action_register_webhook(self):
         self.ensure_one()

@@ -4,5 +4,13 @@ access_api_connect_group_user,api.connect.terminal.group user,model_api_connect_
 access_api_connect_group_manager,api.connect.terminal.group manager,model_api_connect_terminal_group,api_connect.group_apiconnect_manager,1,1,1,1
 access_api_connect_terminal_user,api.connect.terminal user,model_api_connect_terminal,api_connect.group_apiconnect_user,1,0,0,0
 access_api_connect_terminal_manager,api.connect.terminal manager,model_api_connect_terminal,api_connect.group_apiconnect_manager,1,1,1,1
+access_api_connect_door_user,api.connect.terminal.door user,model_api_connect_terminal_door,api_connect.group_apiconnect_user,1,0,0,0
+access_api_connect_door_manager,api.connect.terminal.door manager,model_api_connect_terminal_door,api_connect.group_apiconnect_manager,1,1,1,1
+access_api_connect_commandlog_user,api.connect.command.log user,model_api_connect_command_log,api_connect.group_apiconnect_user,1,0,0,0
+access_api_connect_commandlog_manager,api.connect.command.log manager,model_api_connect_command_log,api_connect.group_apiconnect_manager,1,1,1,1
 access_api_connect_event_user,api.connect.event user,model_api_connect_event,api_connect.group_apiconnect_user,1,0,0,0
 access_api_connect_event_manager,api.connect.event manager,model_api_connect_event,api_connect.group_apiconnect_manager,1,1,1,1
+access_wizard_door_settings,api.connect.door.settings.wizard,model_api_connect_door_settings_wizard,api_connect.group_apiconnect_manager,1,1,1,1
+access_wizard_wiegand,api.connect.wiegand.wizard,model_api_connect_wiegand_wizard,api_connect.group_apiconnect_manager,1,1,1,1
+access_wizard_message,api.connect.message.wizard,model_api_connect_message_wizard,api_connect.group_apiconnect_manager,1,1,1,1
+access_wizard_publicity,api.connect.publicity.wizard,model_api_connect_publicity_wizard,api_connect.group_apiconnect_manager,1,1,1,1

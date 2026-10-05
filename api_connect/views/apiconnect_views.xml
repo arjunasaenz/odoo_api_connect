@@ -72,7 +72,18 @@
             <form>
                 <header>
                     <button name="action_create_in_api" type="object" string="Crear en API Connect" class="btn-primary" icon="fa-cloud-upload" invisible="api_id"/>
-                    <button name="action_sync_from_api" type="object" string="Sincronizar" icon="fa-refresh"/>
+                    <button name="action_update_in_api" type="object" string="Actualizar en API" class="btn-primary" icon="fa-save" invisible="not api_id"/>
+                    <button name="action_refresh_parameters" type="object" string="Refrescar parámetros" icon="fa-cogs" invisible="not api_id"/>
+                    <button name="action_unlock_quick" type="object" string="Desbloquear (5 s)" icon="fa-unlock-alt" invisible="not api_id"/>
+                    <button name="action_cmd_sync_time" type="object" string="Sincronizar hora" icon="fa-clock-o" invisible="not api_id"/>
+                    <button name="%(action_api_connect_message_wizard)d" type="action" string="Enviar mensaje" icon="fa-comment-o" invisible="not api_id"/>
+                    <button name="%(action_api_connect_wiegand_wizard)d" type="action" string="Wiegand" icon="fa-id-card" invisible="not api_id"/>
+                    <button name="action_restore_factory" type="object" string="Restaurar fábrica" icon="fa-warning" confirm="Esto enviará el comando de restauración de fábrica a la terminal. ¿Continuar?" groups="api_connect.group_apiconnect_manager" invisible="not api_id"/>
+                    <button name="action_cmd_reboot" type="object" string="Reiniciar" icon="fa-power-off" confirm="¿Enviar REBOOT a la terminal?" groups="api_connect.group_apiconnect_manager" invisible="not api_id"/>
+                    <button name="action_cmd_clear_log" type="object" string="Borrar logs" icon="fa-eraser" confirm="¿Borrar los registros de marcaciones del dispositivo?" groups="api_connect.group_apiconnect_manager" invisible="not api_id"/>
+                    <button name="action_cmd_clear_data" type="object" string="Borrar TODOS los datos" icon="fa-trash" confirm="BORRARÁ usuarios, rostros, tarjetas y marcaciones del dispositivo. ¿Seguro?" groups="api_connect.group_apiconnect_manager" invisible="not api_id"/>
+                    <button name="action_hk_reset_access" type="object" string="Reset acceso (HK)" icon="fa-undo" confirm="Restablecerá los ajustes de acceso del panel Hikvision. ¿Continuar?" groups="api_connect.group_apiconnect_manager" invisible="not api_id or brand != 'HK'"/>
+                    <button name="action_hk_factory_settings" type="object" string="Fábrica puertas (HK)" icon="fa-exclamation-triangle" confirm="Ajustes de fábrica por puerta del panel Hikvision. ¿Continuar?" groups="api_connect.group_apiconnect_manager" invisible="not api_id or brand != 'HK'"/>
                 </header>
                 <sheet>
                     <widget name="web_ribbon" title="Registrada en API" bg="success" invisible="not api_id"/>
@@ -97,7 +108,46 @@
                             <field name="auto_renew" readonly="1"/>
                             <field name="expire_day" readonly="1"/>
                         </group>
+                        <group name="terminal_capacity" string="Capacidades del equipo">
+                            <field name="device_type" readonly="1"/>
+                            <field name="device_name" readonly="1"/>
+                            <field name="door_count" readonly="1"/>
+                            <field name="reader_count" readonly="1"/>
+                            <field name="params_synced_at" readonly="1"/>
+                        </group>
                     </group>
+                    <notebook>
+                        <page string="Puertas" name="page_doors">
+                            <field name="door_ids" readonly="1">
+                                <list>
+                                    <field name="door_number"/>
+                                    <field name="name"/>
+                                    <field name="open_time"/>
+                                    <button name="action_open_door" type="object" string="Abrir" icon="fa-unlock-alt" class="btn-secondary"/>
+                                    <button name="action_open_door_settings" type="object" string="Configurar" icon="fa-cogs" class="btn-secondary" groups="api_connect.group_apiconnect_manager"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Comandos" name="page_commands">
+                            <div class="d-flex gap-2 mb-2">
+                                <button name="action_fetch_responses" type="object" string="Consultar respuestas del dispositivo (hoy)" icon="fa-inbox"/>
+                                <button name="action_cmd_reload_options" type="object" string="Reload options" icon="fa-download"/>
+                                <button name="action_cmd_check" type="object" string="Check" icon="fa-check"/>
+                                <button name="%(action_api_connect_publicity_wizard)d" type="action" string="Publicidad" icon="fa-picture-o"/>
+                            </div>
+                            <field name="command_ids" readonly="1">
+                                <list>
+                                    <field name="sent_at"/>
+                                    <field name="action"/>
+                                    <field name="status" decoration-success="status == 'ok'" decoration-danger="status == 'failed'"/>
+                                    <field name="api_response"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Parámetros crudos" name="page_params">
+                            <field name="parameters_json" readonly="1"/>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>
@@ -130,18 +180,55 @@
         <field name="name">api.connect.terminal.group.list</field>
         <field name="model">api.connect.terminal.group</field>
         <field name="arch" type="xml">
-            <list>
+            <list editable="bottom">
                 <field name="name"/>
                 <field name="description"/>
-                <field name="terminal_ids" widget="many2many_tags"/>
+                <field name="color_code"/>
+                <field name="api_id" optional="hide"/>
             </list>
+        </field>
+    </record>
+
+    <record id="view_apiconnect_terminal_group_form" model="ir.ui.view">
+        <field name="name">api.connect.terminal.group.form</field>
+        <field name="model">api.connect.terminal.group</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_create_in_api" type="object" string="Crear en API Connect" class="btn-primary" icon="fa-cloud-upload" invisible="api_id"/>
+                    <button name="action_update_in_api" type="object" string="Actualizar en API" icon="fa-save" invisible="not api_id"/>
+                    <button name="action_delete_from_api" type="object" string="Eliminar (también en API)" icon="fa-trash" confirm="Se eliminará el grupo en API Connect y las terminales quedarán sin grupo. ¿Continuar?" groups="api_connect.group_apiconnect_manager" invisible="not api_id"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Registrado en API" bg="success" invisible="not api_id"/>
+                    <group>
+                        <group string="Grupo">
+                            <field name="name"/>
+                            <field name="description"/>
+                            <field name="color_code"/>
+                            <field name="api_id" readonly="1"/>
+                        </group>
+                    </group>
+                    <separator string="Terminales del grupo"/>
+                    <field name="terminal_ids">
+                        <list>
+                            <field name="name"/>
+                            <field name="sn"/>
+                            <field name="brand"/>
+                            <field name="model"/>
+                            <field name="online"/>
+                            <field name="last_sync"/>
+                        </list>
+                    </field>
+                </sheet>
+            </form>
         </field>
     </record>
 
     <record id="action_apiconnect_terminal_group" model="ir.actions.act_window">
         <field name="name">Grupos de terminales</field>
         <field name="res_model">api.connect.terminal.group</field>
-        <field name="view_mode">list</field>
+        <field name="view_mode">list,form</field>
     </record>
 
     <record id="view_apiconnect_event_list" model="ir.ui.view">
@@ -158,7 +245,7 @@
                 <field name="pin"/>
                 <field name="employee_id"/>
                 <field name="direction"/>
-                <field name="state" decoration-success="state == 'processed'" decoration-warning="state in ['no_employee', 'no_terminal', 'unmatched']" decoration-danger="state == 'error'" decoration-muted="state in ['repeated', 'stale', 'loose_out', 'invalid']"/>
+                <field name="state" decoration-success="state == 'processed'" decoration-warning="state in ['no_employee', 'no_terminal', 'unmatched', 'out_group']" decoration-danger="state == 'error'" decoration-muted="state in ['repeated', 'stale', 'loose_out', 'invalid']"/>
                 <field name="attendance_id"/>
                 <field name="note" optional="hide"/>
                 <field name="event_id" optional="hide"/>

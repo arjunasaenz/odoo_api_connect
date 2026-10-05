@@ -45,6 +45,29 @@ sistema `api_connect.web_base_url` (Ajustes → Técnico → Parámetros del sis
   Las de *Sin empleado con ese PIN* se rescatan con el botón **Reprocesar**
   (selección) una vez asignado el PIN.
 
+## Gestión de terminales (Fase 1)
+
+Desde la ficha de cada terminal (menú *Terminales*): **Actualizar en API**,
+**Refrescar parámetros** (tipo de equipo, nº de puertas/lectores, parámetros
+crudos), **Desbloquear (5 s)**, **Sincronizar hora**, **Enviar mensaje**
+(público o privado por PIN), **Wiegand** (definir/borrar formato),
+**Restaurar fábrica**, **Reiniciar**, **Borrar logs**, **Borrar TODOS los
+datos** (destructivos con confirmación, solo administrador), **Reset de
+acceso** y **Fábrica de puertas** (solo Hikvision).
+
+Cada comando queda en el log (pestaña *Comandos*) con la respuesta del
+dispositivo consultable vía *Consultar respuestas del dispositivo (hoy)*.
+
+**Puertas**: al refrescar parámetros se generan las N puertas del panel
+(una fila por puerta con nombre editable). Cada puerta tiene *Abrir* y
+*Configurar* (settings de puerta por marca: ZK `door/set_parameters`,
+HK `acc/access/door_settings`).
+
+**Grupos de terminales**: bidireccionales — se sincronizan desde la API y se
+pueden crear/renombrar/eliminar en la API desde Odoo (la creación incluye las
+terminales asignadas; agregar terminales a un grupo existente se hace desde la
+ficha de terminal vía la API; quitar no está soportado por la API).
+
 ## Emparejamiento por grupos
 
 - Cada terminal pertenece a un **grupo** (sincronizado desde API Connect) o al

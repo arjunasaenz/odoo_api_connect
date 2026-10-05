@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_api_connect_door_settings_wizard_form" model="ir.ui.view">
+        <field name="name">api.connect.door.settings.wizard.form</field>
+        <field name="model">api.connect.door.settings.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="terminal_id"/>
+                    <field name="door_number"/>
+                    <field name="OpenDelayTime"/>
+                    <field name="KeepOpenPeriodDoor"/>
+                    <field name="ActivePeriodDoor"/>
+                    <field name="VerificationType"/>
+                    <field name="SensorType"/>
+                    <field name="SensorDelayTime"/>
+                    <field name="Reader1IOStatus"/>
+                    <field name="Reader2IOStatus"/>
+                    <field name="WiegandInID"/>
+                    <field name="WiegandOutID"/>
+                    <field name="SuperPassword" password="True"/>
+                    <field name="DuressPassword" password="True"/>
+                </group>
+                <footer>
+                    <button name="action_apply" type="object" string="Aplicar a la terminal" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_api_connect_wiegand_wizard_form" model="ir.ui.view">
+        <field name="name">api.connect.wiegand.wizard.form</field>
+        <field name="model">api.connect.wiegand.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="terminal_id"/>
+                    <field name="wiegand_format_id_number"/>
+                    <field name="format_name"/>
+                    <field name="total_bits"/>
+                    <field name="facility_code"/>
+                    <field name="auto_selection"/>
+                    <field name="first_parity_bit_position"/>
+                    <field name="second_parity_bit_position"/>
+                    <field name="odd_bit_start"/>
+                    <field name="odd_bit_length"/>
+                    <field name="even_bit_start"/>
+                    <field name="even_bit_length"/>
+                    <field name="card_number_start"/>
+                    <field name="card_number_length"/>
+                    <field name="facility_code_start"/>
+                    <field name="facility_code_length"/>
+                </group>
+                <footer>
+                    <button name="action_set" type="object" string="Definir formato" class="btn-primary"/>
+                    <button name="action_delete" type="object" string="Borrar formato" class="btn-secondary" confirm="¿Borrar el formato Wiegand del terminal?"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_api_connect_wiegand_wizard" model="ir.actions.act_window">
+        <field name="name">Formato Wiegand</field>
+        <field name="res_model">api.connect.wiegand.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'default_terminal_id': active_id}</field>
+    </record>
+
+    <record id="view_api_connect_message_wizard_form" model="ir.ui.view">
+        <field name="name">api.connect.message.wizard.form</field>
+        <field name="model">api.connect.message.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="terminal_ids" widget="many2many_tags"/>
+                    <field name="message_id"/>
+                    <field name="message"/>
+                    <field name="type_message"/>
+                    <field name="pin" invisible="type_message != '2'"/>
+                    <field name="duration"/>
+                    <field name="start_at"/>
+                </group>
+                <footer>
+                    <button name="action_send" type="object" string="Enviar mensaje" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_api_connect_message_wizard" model="ir.actions.act_window">
+        <field name="name">Enviar mensaje</field>
+        <field name="res_model">api.connect.message.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'default_terminal_ids': active_ids}</field>
+    </record>
+
+    <record id="view_api_connect_publicity_wizard_form" model="ir.ui.view">
+        <field name="name">api.connect.publicity.wizard.form</field>
+        <field name="model">api.connect.publicity.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="terminal_id"/>
+                    <field name="url"/>
+                    <field name="index"/>
+                </group>
+                <footer>
+                    <button name="action_load" type="object" string="Cargar imagen" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_api_connect_publicity_wizard" model="ir.actions.act_window">
+        <field name="name">Publicidad</field>
+        <field name="res_model">api.connect.publicity.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'default_terminal_id': active_id}</field>
+    </record>
+</odoo>
