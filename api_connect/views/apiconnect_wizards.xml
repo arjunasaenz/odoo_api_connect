@@ -124,6 +124,94 @@
         <field name="target">new</field>
         <field name="context">{'default_terminal_id': active_id}</field>
     </record>
+    <record id="view_api_connect_fingerprint_wizard_form" model="ir.ui.view">
+        <field name="name">api.connect.fingerprint.wizard.form</field>
+        <field name="model">api.connect.fingerprint.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="employee_id"/>
+                    <field name="fp_id"/>
+                    <field name="template_file" required="1"/>
+                </group>
+                <footer>
+                    <button name="action_register" type="object" string="Registrar huella" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_api_connect_biodata_wizard_form" model="ir.ui.view">
+        <field name="name">api.connect.biodata.wizard.form</field>
+        <field name="model">api.connect.biodata.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="employee_id"/>
+                    <field name="type_"/>
+                    <field name="content_file" required="1"/>
+                </group>
+                <footer>
+                    <button name="action_register" type="object" string="Registrar biodata" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_api_connect_selfie_wizard_form" model="ir.ui.view">
+        <field name="name">api.connect.selfie.wizard.form</field>
+        <field name="model">api.connect.selfie.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="employee_ids" widget="many2many_tags"/>
+                    <field name="url_redirect"/>
+                    <field name="subject"/>
+                    <field name="message"/>
+                </group>
+                <footer>
+                    <button name="action_invite" type="object" string="Enviar invitación" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_api_connect_selfie_wizard" model="ir.actions.act_window">
+        <field name="name">Invitar a selfie</field>
+        <field name="res_model">api.connect.selfie.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'default_employee_ids': active_ids}</field>
+    </record>
+
+    <record id="view_api_connect_employee_accessgroup_wizard_form" model="ir.ui.view">
+        <field name="name">api.connect.employee.accessgroup.wizard.form</field>
+        <field name="model">api.connect.employee.accessgroup.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="employee_ids" widget="many2many_tags"/>
+                    <field name="access_group_number"/>
+                </group>
+                <footer>
+                    <button name="action_apply" type="object" string="Aplicar grupo de acceso" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_api_connect_employee_accessgroup_wizard" model="ir.actions.act_window">
+        <field name="name">Grupo de acceso del empleado</field>
+        <field name="res_model">api.connect.employee.accessgroup.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'default_employee_ids': active_ids}</field>
+    </record>
+
     <record id="view_api_connect_access_group_wizard_form" model="ir.ui.view">
         <field name="name">api.connect.access.group.wizard.form</field>
         <field name="model">api.connect.access.group.wizard</field>

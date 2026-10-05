@@ -1,5 +1,7 @@
 import random
 
+import base64
+
 import pytz
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -168,6 +170,156 @@ class ApiConnectMessageWizard(models.TransientModel):
                         "message_id": self.message_id,
                     }),
                 )
+        return {"type": "ir.actions.act_window_close"}
+
+
+class ApiConnectFingerprintWizard(models.TransientModel):
+    _name = "api.connect.fingerprint.wizard"
+    _description = "API Connect - Registrar huella dactilar"
+
+    employee_id = fields.Many2one("hr.employee", string="Empleado", required=True)
+    fp_id = fields.Integer(
+        string="ID de huella (1-10)",
+        default=1,
+        required=True,
+        help="Cada usuario admite hasta 10 huellas (IDs 1-10)",
+    )
+    template_file = fields.Binary(
+        string="Plantilla de huella (archivo)",
+        required=True,
+        help="Archivo de plantilla de huella que se enviará codificado en BASE64",
+    )
+
+    def action_register(self):
+        self.ensure_one()
+        employee = self.employee_id
+        if not (1 <= self.fp_id <= 10):
+            raise UserError(_("El ID de huella debe estar entre 1 y 10"))
+        template = base64.b64decode(self.template_file)
+        client = employee._apiconnect_client()
+        failures = []
+        for terminal in employee.apiconnect_terminal_ids:
+            try:
+                client.add_fingerprint(
+                    terminal.sn,
+                    employee.apiconnect_pin,
+                    self.fp_id,
+                    template.decode("latin-1"),
+                )
+            except UserError as exc:
+                failures.append("%s: %s" % (terminal.sn, exc))
+        if failures:
+            raise UserError(_("Huella con errores:\n%s") % "\n".join(failures))
+        return {"type": "ir.actions.act_window_close"}
+
+
+class ApiConnectBiodataWizard(models.TransientModel):
+    _name = "api.connect.biodata.wizard"
+    _description = "API Connect - Registrar datos biométricos"
+
+    employee_id = fields.Many2one("hr.employee", string="Empleado", required=True)
+    type_ = fields.Selection(
+        [
+            ("1", "Huella"),
+            ("2", "Rostro"),
+            ("3", "Rostro luz visible"),
+        ],
+        string="Tipo de dato",
+        default="1",
+        required=True,
+    )
+    content_file = fields.Binary(
+        string="Datos biométricos (archivo)",
+        required=True,
+        help="Contenido biométrico que se enviará codificado en BASE64",
+    )
+
+    def action_register(self):
+        self.ensure_one()
+        employee = self.employee_id
+        content = base64.b64decode(self.content_file)
+        client = employee._apiconnect_client()
+        failures = []
+        for terminal in employee.apiconnect_terminal_ids:
+            try:
+                client.add_biodata(
+                    terminal.sn,
+                    employee.apiconnect_pin,
+                    int(self.type_),
+                    content.decode("latin-1"),
+                )
+            except UserError as exc:
+                failures.append("%s: %s" % (terminal.sn, exc))
+        if failures:
+            raise UserError(_("Biodata con errores:\n%s") % "\n".join(failures))
+        return {"type": "ir.actions.act_window_close"}
+
+
+class ApiConnectSelfieWizard(models.TransientModel):
+    _name = "api.connect.selfie.wizard"
+    _description = "API Connect - Invitar a registro por selfie"
+
+    employee_ids = fields.Many2many("hr.employee", string="Empleados", required=True)
+    url_redirect = fields.Char(string="URL de redirección tras la selfie (opcional)")
+    subject = fields.Char(string="Asunto del email (opcional)")
+    message = fields.Text(string="Mensaje del email (opcional)")
+
+    def action_invite(self):
+        self.ensure_one()
+        client = self.env["api.connect.config"].get_client()
+        failures = []
+        for employee in self.employee_ids:
+            if not employee.apiconnect_pin:
+                failures.append("%s: sin PIN API Connect" % employee.name)
+                continue
+            if not employee.work_email:
+                failures.append("%s: sin email de trabajo" % employee.name)
+                continue
+            sns = employee.apiconnect_terminal_ids.mapped("sn")
+            if not sns:
+                failures.append("%s: sin terminales asignadas" % employee.name)
+                continue
+            try:
+                client.invite_selfie(
+                    sns,
+                    employee.work_email,
+                    employee.apiconnect_pin,
+                    employee.name,
+                    url_redirect=self.url_redirect or None,
+                )
+            except UserError as exc:
+                failures.append("%s: %s" % (employee.name, exc))
+        if failures:
+            raise UserError(_("Invitaciones con errores:\n%s") % "\n".join(failures))
+        return {"type": "ir.actions.act_window_close"}
+
+
+class ApiConnectEmployeeAccessGroupWizard(models.TransientModel):
+    _name = "api.connect.employee.accessgroup.wizard"
+    _description = "API Connect - Grupo de acceso del empleado"
+
+    employee_ids = fields.Many2many("hr.employee", string="Empleados", required=True)
+    access_group_number = fields.Integer(string="Grupo de acceso", default=1, required=True)
+
+    def action_apply(self):
+        self.ensure_one()
+        client = self.env["api.connect.config"].get_client()
+        failures = []
+        for employee in self.employee_ids:
+            if not employee.apiconnect_pin:
+                failures.append("%s: sin PIN API Connect" % employee.name)
+                continue
+            for terminal in employee.apiconnect_terminal_ids:
+                try:
+                    client.set_customer_access_group(
+                        terminal.sn,
+                        employee.apiconnect_pin,
+                        self.access_group_number,
+                    )
+                except UserError as exc:
+                    failures.append("%s → %s: %s" % (employee.name, terminal.sn, exc))
+        if failures:
+            raise UserError(_("Grupos con errores:\n%s") % "\n".join(failures))
         return {"type": "ir.actions.act_window_close"}
 
 

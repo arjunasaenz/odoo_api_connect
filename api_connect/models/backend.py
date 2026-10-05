@@ -42,8 +42,8 @@ class ApiConnectClient:
     def _login(self):
         if not self.base_url or not self.username or not self.password:
             raise UserError(_(
-                "Complete la configuraci?n de API Connect "
-                "(URL, usuario y contrase?a) antes de continuar."
+                "Complete la configuración de API Connect "
+                "(URL, usuario y contraseña) antes de continuar."
             ))
         try:
             resp = requests.post(
@@ -183,7 +183,7 @@ class ApiConnectClient:
         data = self.check(
             self.request("GET", "/terminal/parameters/%s" % api_id),
             (200,),
-            "par?metros de terminal",
+            "parámetros de terminal",
         )
         if isinstance(data, list) and len(data) > 1 and isinstance(data[1], dict):
             return data[1].get("parameters") or {}
@@ -245,14 +245,14 @@ class ApiConnectClient:
         return self.check(
             self.request("POST", "/acc/access/factory_settings/%s/" % sn),
             (200, 201),
-            "f?brica de puertas en %s" % sn,
+            "fábrica de puertas en %s" % sn,
         )
 
     def restore_factory(self, sn):
         return self.check(
             self.request("POST", "/terminal/restore_factory/%s" % sn),
             (200, 201),
-            "restaurar f?brica %s" % sn,
+            "restaurar fábrica %s" % sn,
         )
 
     def set_wiegand(self, sn, payload):
@@ -382,10 +382,106 @@ class ApiConnectClient:
             "registrar visitante en %s" % sn,
         )
 
+    def update_customer(self, sn, payload):
+        return self.check(
+            self.request("PUT", "/customer/%s" % sn, payload=payload),
+            (200, 201),
+            "actualizar %s en %s" % (payload.get("pin"), sn),
+        )
+
+    def bulk_create_customers(self, sn, customers):
+        return self.check(
+            self.request("POST", "/customer/bulk/%s" % sn, payload=customers),
+            (200, 201),
+            "alta masiva en %s" % sn,
+        )
+
+    def bulk_delete_customers(self, sn, pins):
+        return self.check(
+            self.request("DELETE", "/customer/delete/bulk/%s" % sn, payload=pins),
+            (200, 201),
+            "baja masiva en %s" % sn,
+        )
+
+    def add_fingerprint(self, sn, pin, fp_id, template):
+        return self.check(
+            self.request("POST", "/customer/fp/%s" % sn, payload={
+                "pin": pin,
+                "fp_id": fp_id,
+                "fp_template": template,
+            }),
+            (200, 201),
+            "huella %s en %s" % (pin, sn),
+        )
+
+    def add_biodata(self, sn, pin, type_, content):
+        return self.check(
+            self.request("POST", "/customer/biodata/%s" % sn, payload={
+                "pin": pin,
+                "type_": type_,
+                "content": content,
+            }),
+            (200, 201),
+            "biodata %s en %s" % (pin, sn),
+        )
+
+    def renew_expiration(self, sn, pin, expiration_date):
+        return self.check(
+            self.request("POST", "/customer/renew_expiration/%s" % sn, payload={
+                "pin": pin,
+                "expiration_date": expiration_date,
+            }),
+            (200, 201),
+            "renovar expiración %s en %s" % (pin, sn),
+        )
+
+    def invite_selfie(self, sns, email, pin, full_name, url_redirect=None):
+        payload = {
+            "sn": sns,
+            "email": email,
+            "pin": pin,
+            "full_name": full_name,
+        }
+        if url_redirect:
+            payload["url_redirect"] = url_redirect
+        return self.check(
+            self.request("POST", "/customer/selfie/", payload=payload),
+            (200, 201),
+            "invitación selfie %s" % pin,
+        )
+
+    def delete_biophoto(self, sn, pin):
+        return self.check(
+            self.request("DELETE", "/customer/biophoto/delete/%s" % sn, payload={
+                "pin": pin
+            }),
+            (200, 201),
+            "borrar biophoto %s en %s" % (pin, sn),
+        )
+
+    def delete_card(self, sn, pin):
+        return self.check(
+            self.request("DELETE", "/customer/card/delete/%s" % sn, payload={
+                "pin": pin
+            }),
+            (200, 201),
+            "borrar tarjeta %s en %s" % (pin, sn),
+        )
+
+    def set_customer_access_group(self, sn, pin, access_group_number):
+        return self.check(
+            self.request("POST", "/customer/access_group/%s" % sn, payload={
+                "pin": pin,
+                "access_group_number": access_group_number,
+            }),
+            (200, 201),
+            "grupo de acceso %s en %s" % (pin, sn),
+        )
+
 
 class ApiConnectConfig(models.Model):
     _name = "api.connect.config"
-    _description = "API Connect - Configuraci?n"
+    _description = "API Connect - Configuración"
     _order = "id"
 
     base_url = fields.Char(
@@ -393,7 +489,7 @@ class ApiConnectConfig(models.Model):
         default="https://api-connect.rentipsolution.com",
     )
     username = fields.Char(string="Usuario")
-    password = fields.Char(string="Contrase?a")
+    password = fields.Char(string="Contraseña")
     webhook_secret = fields.Char(
         string="Secret del webhook",
         readonly=True,
@@ -401,7 +497,7 @@ class ApiConnectConfig(models.Model):
         default=lambda self: secrets.token_urlsafe(32),
     )
     punch_window_minutes = fields.Float(
-        string="Ventana anti-repetici?n (min)",
+        string="Ventana anti-repetición (min)",
         default=1.0,
         digits=(14, 2),
         help="Marcaciones del mismo empleado dentro de esta ventana se "
@@ -477,7 +573,7 @@ class ApiConnectConfig(models.Model):
         self.ensure_one()
         client = self._client()
         data = client.list_terminals()
-        return self._notify(_("Conexi?n correcta. Terminales visibles: %s") % len(data))
+        return self._notify(_("Conexión correcta. Terminales visibles: %s") % len(data))
 
     def action_register_webhook(self):
         self.ensure_one()

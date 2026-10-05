@@ -1,16 +1,16 @@
 {
     "name": "API Connect",
-    "summary": "Conector Odoo para terminales de acceso ZKTeco/Hikvision v?a API Connect",
+    "summary": "Conector Odoo para terminales de acceso ZKTeco/Hikvision vía API Connect",
     "description": """
-Gesti?n desde Odoo de terminales de control de acceso conectados a API Connect:
-- Sincronizaci?n y creaci?n de terminales
+Gestión desde Odoo de terminales de control de acceso conectados a API Connect:
+- Sincronización y creación de terminales
 - Registro de empleados (PIN, tarjeta, rostro) en los terminales
-- Recepci?n de marcaciones por webhook en hr.attendance (idempotente)
+- Recepción de marcaciones por webhook en hr.attendance (idempotente)
 """,
     "author": "RentIP Solution",
     "website": "https://rentipsolution.com",
     "category": "Human Resources/Connectors",
-    "version": "18.0.2.0.0",
+    "version": "18.0.3.0.0",
     "license": "LGPL-3",
     "depends": ["hr", "hr_attendance"],
     "data": [

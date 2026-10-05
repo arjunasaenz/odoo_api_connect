@@ -45,6 +45,19 @@ sistema `api_connect.web_base_url` (Ajustes → Técnico → Parámetros del sis
   Las de *Sin empleado con ese PIN* se rescatan con el botón **Reprocesar**
   (selección) una vez asignado el PIN.
 
+## Empleados avanzados (Fase 3)
+
+En la ficha del empleado: **Actualizar en terminales** (PUT con nombre/tarjeta/
+expiración), **Expira en terminales** (fecha opcional) + **Renovar expiración**,
+**Registrar huella** y **Biodata** (wizards con subida de plantilla binaria,
+base64 automática), **Borrar tarjeta**/**Borrar rostro**, **Invitar a selfie**
+(usa el email de trabajo y las terminales del empleado) y **Grupo de acceso**
+(wizard por empleado).
+
+En la **lista de empleados** (menú Acción, solo administrador):
+*API Connect: Alta masiva en terminales* y *Baja masiva de terminales*
+(una llamada `bulk` por terminal, lotes de 300, máximo 3000 por llamada).
+
 ## Horarios, feriados y visitantes (Fase 2)
 
 - **Horarios de acceso** (pestaña *Horarios de acceso* de la terminal):

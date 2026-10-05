@@ -8,13 +8,22 @@
             <xpath expr="//page[@name='hr_settings']" position="inside">
                 <group string="API Connect" name="apiconnect_group" groups="api_connect.group_apiconnect_user">
                     <field name="apiconnect_pin"/>
+                    <field name="apiconnect_expiration"/>
                     <field name="apiconnect_terminal_ids" widget="many2many_tags"/>
                 </group>
                 <div class="d-flex flex-wrap gap-2 mt-2" name="apiconnect_actions" groups="api_connect.group_apiconnect_user">
                     <button name="action_register_in_terminals" type="object" string="Registrar en terminales" icon="fa-id-card-o" class="btn-secondary"/>
+                    <button name="action_update_in_terminals" type="object" string="Actualizar en terminales" icon="fa-refresh" class="btn-secondary"/>
                     <button name="action_register_card" type="object" string="Registrar tarjeta" icon="fa-credit-card" class="btn-secondary"/>
+                    <button name="action_delete_card" type="object" string="Borrar tarjeta" icon="fa-credit-card" class="btn-secondary"/>
                     <button name="action_register_face" type="object" string="Registrar rostro (foto)" icon="fa-user-circle" class="btn-secondary"/>
+                    <button name="action_delete_biophoto" type="object" string="Borrar rostro" icon="fa-user-times" class="btn-secondary"/>
                     <button name="action_register_photo" type="object" string="Subir foto a pantalla" icon="fa-picture-o" class="btn-secondary"/>
+                    <button name="action_register_fingerprint" type="object" string="Registrar huella" icon="fa-fingerprint" class="btn-secondary"/>
+                    <button name="action_register_biodata" type="object" string="Biodata" icon="fa-database" class="btn-secondary"/>
+                    <button name="action_invite_selfie" type="object" string="Invitar a selfie" icon="fa-camera" class="btn-secondary"/>
+                    <button name="action_renew_expiration" type="object" string="Renovar expiración" icon="fa-calendar-plus-o" class="btn-secondary"/>
+                    <button name="action_set_access_group" type="object" string="Grupo de acceso" icon="fa-users" class="btn-secondary"/>
                     <button name="action_remove_from_terminals" type="object" string="Eliminar de terminales" icon="fa-trash" class="btn-secondary text-danger"/>
                 </div>
             </xpath>
