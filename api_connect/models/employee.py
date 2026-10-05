@@ -150,7 +150,13 @@ class HrEmployee(models.Model):
         self._apiconnect_ensure_pin()
 
         def action(client, employee, terminal):
-            client.delete_card(terminal.sn, employee.apiconnect_pin)
+            if not employee.barcode:
+                raise UserError(
+                    _("El empleado %s no tiene número de tarjeta (badge) en su ficha; "
+                      "la API exige el número de tarjeta para borrarla. Registra el "
+                      "badge y repite la acción.") % employee.name
+                )
+            client.delete_card(terminal.sn, employee.apiconnect_pin, employee.barcode)
 
         return self._apiconnect_run(_("Borrado de tarjetas"), action)
 

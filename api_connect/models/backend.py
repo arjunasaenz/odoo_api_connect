@@ -467,10 +467,11 @@ class ApiConnectClient:
             "borrar biophoto %s en %s" % (pin, sn),
         )
 
-    def delete_card(self, sn, pin):
+    def delete_card(self, sn, pin, card_number):
         return self.check(
             self.request("DELETE", "/customer/card/delete/%s" % sn, payload={
-                "pin": pin
+                "pin": pin,
+                "card_number": card_number,
             }),
             (200, 201),
             "borrar tarjeta %s en %s" % (pin, sn),
