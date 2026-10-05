@@ -1,3 +1,5 @@
+import random
+
 import pytz
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -167,6 +169,111 @@ class ApiConnectMessageWizard(models.TransientModel):
                     }),
                 )
         return {"type": "ir.actions.act_window_close"}
+
+
+class ApiConnectAccessGroupWizard(models.TransientModel):
+    _name = "api.connect.access.group.wizard"
+    _description = "API Connect - Grupo de acceso (ZKTeco)"
+
+    terminal_id = fields.Many2one("api.connect.terminal", string="Terminal", required=True)
+    access_group_id = fields.Integer(string="Número de grupo de acceso", required=True)
+    holiday = fields.Char(
+        string="Feriados (opcional)",
+        help="Definición de feriados del grupo tal como la interpreta el panel",
+    )
+    tz_format = fields.Char(string="Formato de zona horaria (opcional)")
+
+    def action_apply(self):
+        self.ensure_one()
+        terminal = self.terminal_id
+        if not terminal.api_id:
+            raise UserError(
+                _("Registre o sincronice la terminal %s primero") % terminal.sn
+            )
+        payload = {"access_group_id": self.access_group_id}
+        if self.holiday:
+            payload["holiday"] = self.holiday
+        if self.tz_format:
+            payload["tz_format"] = self.tz_format
+        terminal._call_api_logged(
+            _("Grupo de acceso %s") % self.access_group_id,
+            lambda c: c.zk_set_access_group(terminal.sn, payload),
+        )
+        return {"type": "ir.actions.act_window_close"}
+
+
+class ApiConnectVisitorWizard(models.TransientModel):
+    _name = "api.connect.visitor.wizard"
+    _description = "API Connect - Registrar visitante"
+
+    terminal_ids = fields.Many2many("api.connect.terminal", string="Terminales", required=True)
+    pin = fields.Char(string="PIN del visitante", required=True)
+    full_name = fields.Char(string="Nombre completo", required=True)
+    qr_number = fields.Char(
+        string="Número de QR/tarjeta",
+        default=lambda self: str(random.randint(10000000, 99999999)),
+    )
+    access_group_number = fields.Integer(string="Grupo de acceso", default=1)
+    type_visitor = fields.Integer(
+        string="Tipo de visitante",
+        default=1,
+        help="Según el protocolo del terminal (1 permanente, 2 de una entrada...)",
+    )
+    start_at = fields.Datetime(string="Inicio de acceso")
+    end_at = fields.Datetime(string="Fin de acceso")
+    doors = fields.Char(
+        string="Puertas",
+        help="Números de puerta separados por coma (ej: 1,2)",
+    )
+    verification_count = fields.Integer(string="Cantidad de verificaciones")
+    create_link = fields.Boolean(
+        string="Generar enlace QR",
+        help="La API genera un enlace de registro para el visitante",
+    )
+
+    def action_register(self):
+        self.ensure_one()
+        doors_list = None
+        if self.doors:
+            try:
+                doors_list = [int(x) for x in self.doors.split(",") if x.strip()]
+            except ValueError:
+                raise UserError(_("Puertas debe ser números separados por coma"))
+        for terminal in self.terminal_ids:
+            if not terminal.api_id:
+                raise UserError(
+                    _("Registre o sincronice la terminal %s primero") % terminal.sn
+                )
+            payload = {
+                "pin": self.pin,
+                "full_name": self.full_name,
+                "qr_number": self.qr_number or "",
+                "access_group_number": self.access_group_number,
+                "type_visitor": self.type_visitor,
+            }
+            if self.start_at:
+                tz = pytz.timezone(terminal.tz or "UTC")
+                payload["start_access_period"] = pytz.utc.localize(
+                    fields.Datetime.to_datetime(self.start_at)
+                ).astimezone(tz).strftime("%Y-%m-%d %H:%M:%S")
+            if self.end_at:
+                tz = pytz.timezone(terminal.tz or "UTC")
+                payload["end_access_period"] = pytz.utc.localize(
+                    fields.Datetime.to_datetime(self.end_at)
+                ).astimezone(tz).strftime("%Y-%m-%d %H:%M:%S")
+            if doors_list:
+                payload["access_door_number"] = doors_list
+            if self.verification_count:
+                payload["verification_count"] = self.verification_count
+            if self.create_link:
+                payload["create_link"] = True
+            terminal._call_api_logged(
+                _("Visitante %s") % self.full_name,
+                lambda c, p=payload, t=terminal: c.create_visitor(t.sn, p),
+            )
+        return {
+            "type": "ir.actions.act_window_close",
+        }
 
 
 class ApiConnectPublicityWizard(models.TransientModel):

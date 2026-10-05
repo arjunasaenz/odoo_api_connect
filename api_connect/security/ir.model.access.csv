@@ -14,3 +14,9 @@ access_wizard_door_settings,api.connect.door.settings.wizard,model_api_connect_d
 access_wizard_wiegand,api.connect.wiegand.wizard,model_api_connect_wiegand_wizard,api_connect.group_apiconnect_manager,1,1,1,1
 access_wizard_message,api.connect.message.wizard,model_api_connect_message_wizard,api_connect.group_apiconnect_manager,1,1,1,1
 access_wizard_publicity,api.connect.publicity.wizard,model_api_connect_publicity_wizard,api_connect.group_apiconnect_manager,1,1,1,1
+access_access_schedule_user,api.connect.access.schedule user,model_api_connect_access_schedule,api_connect.group_apiconnect_user,1,0,0,0
+access_access_schedule_manager,api.connect.access.schedule manager,model_api_connect_access_schedule,api_connect.group_apiconnect_manager,1,1,1,1
+access_access_holiday_user,api.connect.access.holiday user,model_api_connect_access_holiday,api_connect.group_apiconnect_user,1,0,0,0
+access_access_holiday_manager,api.connect.access.holiday manager,model_api_connect_access_holiday,api_connect.group_apiconnect_manager,1,1,1,1
+access_wizard_access_group,api.connect.access.group.wizard,model_api_connect_access_group_wizard,api_connect.group_apiconnect_manager,1,1,1,1
+access_wizard_visitor,api.connect.visitor.wizard,model_api_connect_visitor_wizard,api_connect.group_apiconnect_manager,1,1,1,1

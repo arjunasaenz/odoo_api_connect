@@ -180,6 +180,18 @@ class ApiConnectTerminal(models.Model):
     command_ids = fields.One2many(
         "api.connect.command.log", "terminal_id", string="Comandos"
     )
+    access_schedule_ids = fields.One2many(
+        "api.connect.access.schedule", "terminal_id", string="Horarios de acceso"
+    )
+    access_holiday_ids = fields.One2many(
+        "api.connect.access.holiday", "terminal_id", string="Feriados de acceso"
+    )
+    schedule_count = fields.Integer(compute="_compute_schedule_count")
+
+    @api.depends("access_schedule_ids")
+    def _compute_schedule_count(self):
+        for terminal in self:
+            terminal.schedule_count = len(terminal.access_schedule_ids)
     online = fields.Boolean(
         string="En línea",
         compute="_compute_online",

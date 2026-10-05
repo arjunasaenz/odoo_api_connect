@@ -45,6 +45,21 @@ sistema `api_connect.web_base_url` (Ajustes → Técnico → Parámetros del sis
   Las de *Sin empleado con ese PIN* se rescatan con el botón **Reprocesar**
   (selección) una vez asignado el PIN.
 
+## Horarios, feriados y visitantes (Fase 2)
+
+- **Horarios de acceso** (pestaña *Horarios de acceso* de la terminal):
+  7 días × 3 periodos. ZKTeco usa `access/access_time` (periodo 1 obligatorio,
+  vacío = `00:00` = sin ventana), Hikvision usa `acc/access/access_time`
+  (formato HHMM; el primer envío es POST y los siguientes PUT).
+- **Feriados** (pestaña *Feriados*): ZK requiere nº + nombre + MM-DD; HK usa
+  `holiday_access_date`/`holiday_type`/`holiday_loop`. Borrado de horarios
+  solo soportado para ZKTeco (la API no lo expone para HK).
+- **Grupo de acceso ZK** (botón en la pestaña): `access_group_id` + opcionales
+  holiday/tz_format → `access/access_group`.
+- **Visitantes** (botón en la pestaña): alta en terminales seleccionadas con
+  PIN, QR (autogenerado), tipo, ventana de acceso, puertas y nº de
+  verificaciones → `visitor/{sn}`.
+
 ## Gestión de terminales (Fase 1)
 
 Desde la ficha de cada terminal (menú *Terminales*): **Actualizar en API**,

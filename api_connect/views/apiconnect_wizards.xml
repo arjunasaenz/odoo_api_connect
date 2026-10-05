@@ -124,4 +124,64 @@
         <field name="target">new</field>
         <field name="context">{'default_terminal_id': active_id}</field>
     </record>
+    <record id="view_api_connect_access_group_wizard_form" model="ir.ui.view">
+        <field name="name">api.connect.access.group.wizard.form</field>
+        <field name="model">api.connect.access.group.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="terminal_id"/>
+                    <field name="access_group_id"/>
+                    <field name="holiday"/>
+                    <field name="tz_format"/>
+                </group>
+                <footer>
+                    <button name="action_apply" type="object" string="Aplicar grupo de acceso" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_api_connect_access_group_wizard" model="ir.actions.act_window">
+        <field name="name">Grupo de acceso</field>
+        <field name="res_model">api.connect.access.group.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'default_terminal_id': active_id}</field>
+    </record>
+
+    <record id="view_api_connect_visitor_wizard_form" model="ir.ui.view">
+        <field name="name">api.connect.visitor.wizard.form</field>
+        <field name="model">api.connect.visitor.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="terminal_ids" widget="many2many_tags"/>
+                    <field name="pin"/>
+                    <field name="full_name"/>
+                    <field name="qr_number"/>
+                    <field name="access_group_number"/>
+                    <field name="type_visitor"/>
+                    <field name="start_at"/>
+                    <field name="end_at"/>
+                    <field name="doors"/>
+                    <field name="verification_count"/>
+                    <field name="create_link"/>
+                </group>
+                <footer>
+                    <button name="action_register" type="object" string="Registrar visitante" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_api_connect_visitor_wizard" model="ir.actions.act_window">
+        <field name="name">Registrar visitante</field>
+        <field name="res_model">api.connect.visitor.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'default_terminal_ids': active_ids}</field>
+    </record>
 </odoo>

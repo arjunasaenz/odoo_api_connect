@@ -329,6 +329,59 @@ class ApiConnectClient:
             "asignar %s a grupo" % sn,
         )
 
+    def zk_set_access_time(self, sn, payload, update=False):
+        return self.check(
+            self.request("POST", "/access/access_time/%s" % sn, payload=payload),
+            (200, 201),
+            "horario de acceso en %s" % sn,
+        )
+
+    def zk_delete_access_time(self, sn, access_time_id):
+        return self.check(
+            self.request("DELETE", "/access/access_time/%s" % sn, payload={
+                "access_time_id": access_time_id
+            }),
+            (200, 201),
+            "borrar horario en %s" % sn,
+        )
+
+    def zk_set_holiday(self, sn, payload, update=False):
+        return self.check(
+            self.request("POST", "/access/access_holiday/%s" % sn, payload=payload),
+            (200, 201),
+            "feriado en %s" % sn,
+        )
+
+    def zk_set_access_group(self, sn, payload):
+        return self.check(
+            self.request("POST", "/access/access_group/%s" % sn, payload=payload),
+            (200, 201),
+            "grupo de acceso en %s" % sn,
+        )
+
+    def hk_set_access_time(self, sn, payload, update=False):
+        method = "PUT" if update else "POST"
+        return self.check(
+            self.request(method, "/acc/access/access_time/%s" % sn, payload=payload),
+            (200, 201),
+            "horario de acceso (HK) en %s" % sn,
+        )
+
+    def hk_set_holiday(self, sn, payload, update=False):
+        method = "PUT" if update else "POST"
+        return self.check(
+            self.request(method, "/acc/access/holiday/%s" % sn, payload=payload),
+            (200, 201),
+            "feriado (HK) en %s" % sn,
+        )
+
+    def create_visitor(self, sn, payload):
+        return self.check(
+            self.request("POST", "/visitor/%s" % sn, payload=payload),
+            (200, 201),
+            "registrar visitante en %s" % sn,
+        )
+
 
 class ApiConnectConfig(models.Model):
     _name = "api.connect.config"

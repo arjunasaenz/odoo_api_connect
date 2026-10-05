@@ -144,6 +144,49 @@
                                 </list>
                             </field>
                         </page>
+                        <page string="Horarios de acceso" name="page_schedules">
+                            <div class="d-flex gap-2 mb-2">
+                                <button name="%(action_api_connect_access_group_wizard)d" type="action" string="Grupo de acceso (ZK)" icon="fa-users" groups="api_connect.group_apiconnect_manager"/>
+                                <button name="%(action_api_connect_visitor_wizard)d" type="action" string="Registrar visitante" icon="fa-user-secret" groups="api_connect.group_apiconnect_manager"/>
+                            </div>
+                            <field name="access_schedule_ids">
+                                <list editable="bottom">
+                                    <field name="schedule_number"/>
+                                    <field name="mon_start1" string="Lun ini"/>
+                                    <field name="mon_end1" string="Lun fin"/>
+                                    <field name="tue_start1" string="Mar ini"/>
+                                    <field name="tue_end1" string="Mar fin"/>
+                                    <field name="wed_start1" string="Mié ini"/>
+                                    <field name="wed_end1" string="Mié fin"/>
+                                    <field name="thu_start1" string="Jue ini"/>
+                                    <field name="thu_end1" string="Jue fin"/>
+                                    <field name="fri_start1" string="Vie ini"/>
+                                    <field name="fri_end1" string="Vie fin"/>
+                                    <field name="sat_start1" string="Sáb ini"/>
+                                    <field name="sat_end1" string="Sáb fin"/>
+                                    <field name="sun_start1" string="Dom ini"/>
+                                    <field name="sun_end1" string="Dom fin"/>
+                                    <field name="synced_once" readonly="1" optional="hide"/>
+                                    <button name="action_set_schedule" type="object" string="Enviar" icon="fa-upload" class="btn-primary" groups="api_connect.group_apiconnect_manager"/>
+                                    <button name="action_delete_schedule" type="object" string="Borrar" icon="fa-trash" confirm="¿Borrar este horario del dispositivo?" groups="api_connect.group_apiconnect_manager"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Feriados" name="page_holidays">
+                            <field name="access_holiday_ids">
+                                <list editable="bottom">
+                                    <field name="holiday_number" string="Nº (ZK)"/>
+                                    <field name="name" string="Nombre (ZK)"/>
+                                    <field name="start_date"/>
+                                    <field name="end_date"/>
+                                    <field name="year"/>
+                                    <field name="holiday_type"/>
+                                    <field name="holiday_loop" string="Loop (HK)"/>
+                                    <field name="access_time_id" string="Horario (ZK TA)"/>
+                                    <button name="action_set_holiday" type="object" string="Enviar" icon="fa-upload" class="btn-primary" groups="api_connect.group_apiconnect_manager"/>
+                                </list>
+                            </field>
+                        </page>
                         <page string="Parámetros crudos" name="page_params">
                             <field name="parameters_json" readonly="1"/>
                         </page>
