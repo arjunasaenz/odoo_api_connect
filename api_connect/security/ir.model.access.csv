@@ -20,3 +20,5 @@ access_access_holiday_user,api.connect.access.holiday user,model_api_connect_acc
 access_access_holiday_manager,api.connect.access.holiday manager,model_api_connect_access_holiday,api_connect.group_apiconnect_manager,1,1,1,1
 access_wizard_access_group,api.connect.access.group.wizard,model_api_connect_access_group_wizard,api_connect.group_apiconnect_manager,1,1,1,1
 access_wizard_visitor,api.connect.visitor.wizard,model_api_connect_visitor_wizard,api_connect.group_apiconnect_manager,1,1,1,1
+access_webhookretry_user,api.connect.webhook.retry user,model_api_connect_webhook_retry,api_connect.group_apiconnect_user,1,0,0,0
+access_webhookretry_manager,api.connect.webhook.retry manager,model_api_connect_webhook_retry,api_connect.group_apiconnect_manager,1,1,1,1

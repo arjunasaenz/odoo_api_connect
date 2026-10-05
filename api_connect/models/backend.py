@@ -329,6 +329,14 @@ class ApiConnectClient:
             "asignar %s a grupo" % sn,
         )
 
+    def webhook_retries(self):
+        resp = self.request("GET", "/api/webhook-retries/")
+        return self.check(resp, (200,), "consultar webhooks fallidos")
+
+    def redis_health(self):
+        resp = self.request("GET", "/api/redis/health")
+        return self.check(resp, (200,), "salud de Redis")
+
     def zk_set_access_time(self, sn, payload, update=False):
         return self.check(
             self.request("POST", "/access/access_time/%s" % sn, payload=payload),
@@ -598,6 +606,14 @@ class ApiConnectConfig(models.Model):
         return self._notify(
             _("Secret rotado. Vuelve a ejecutar 'Registrar webhook en API Connect'."),
             "warning",
+        )
+
+    def action_check_redis(self):
+        self.ensure_one()
+        data = self._client().redis_health()
+        return self._notify(
+            _("Redis monitoring: %s · conexiones activas: %s")
+            % (data.get("status"), data.get("active_connections"))
         )
 
     def sync_groups_api(self):

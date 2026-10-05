@@ -45,6 +45,16 @@ sistema `api_connect.web_base_url` (Ajustes → Técnico → Parámetros del sis
   Las de *Sin empleado con ese PIN* se rescatan con el botón **Reprocesar**
   (selección) una vez asignado el PIN.
 
+## Monitoreo (Fase 4)
+
+- Menú **Webhooks fallidos**: espejo local de la cola de reintentos de API
+  Connect (`GET /api/webhook-retries/`) con pendientes y dead-letter, intentos,
+  códigos HTTP y payload. Botones: *Sincronizar desde API Connect* y
+  *Reprocesar seleccionadas* (entrega idempotente a `hr.attendance`, sin
+  duplicados gracias a la deduplicación por `ID Event`).
+- Botón **Salud Redis** en Configuración → `GET /api/redis/health`.
+- El estado online/offline por terminal sigue del cron de heartbeat.
+
 ## Empleados avanzados (Fase 3)
 
 En la ficha del empleado: **Actualizar en terminales** (PUT con nombre/tarjeta/

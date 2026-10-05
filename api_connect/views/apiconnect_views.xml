@@ -10,6 +10,7 @@
                     <button name="action_sync_terminals" type="object" string="Sincronizar terminales" icon="fa-refresh"/>
                     <button name="action_register_webhook" type="object" string="Registrar webhook en API Connect" class="btn-secondary" icon="fa-bell"/>
                     <button name="action_rotate_webhook_secret" type="object" string="Rotar secret del webhook" icon="fa-key"/>
+                    <button name="action_check_redis" type="object" string="Salud Redis" icon="fa-heartbeat"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -274,6 +275,86 @@
         <field name="view_mode">list,form</field>
     </record>
 
+    <record id="view_apiconnect_webhook_retry_list" model="ir.ui.view">
+        <field name="name">api.connect.webhook.retry.list</field>
+        <field name="model">api.connect.webhook.retry</field>
+        <field name="arch" type="xml">
+            <list>
+                <header>
+                    <button name="action_sync_retries" type="object" string="Sincronizar desde API Connect" class="btn-primary" groups="api_connect.group_apiconnect_manager"/>
+                    <button name="action_reprocess" type="object" string="Reprocesar seleccionadas" groups="api_connect.group_apiconnect_manager" confirm="¿Reprocesar los webhooks seleccionados en Odoo? Son idempotentes (sin duplicados)."/>
+                </header>
+                <field name="event_time"/>
+                <field name="estado" decoration-warning="estado == 'vivo'" decoration-muted="estado == 'muerto'" decoration-success="estado == 'reprocesado'"/>
+                <field name="sn"/>
+                <field name="terminal_name"/>
+                <field name="pin"/>
+                <field name="table" optional="hide"/>
+                <field name="attempt"/>
+                <field name="last_status_code" optional="hide"/>
+                <field name="last_error"/>
+                <field name="next_retry_at" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_apiconnect_webhook_retry_form" model="ir.ui.view">
+        <field name="name">api.connect.webhook.retry.form</field>
+        <field name="model">api.connect.webhook.retry</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_reprocess" type="object" string="Reprocesar en Odoo" class="btn-primary" groups="api_connect.group_apiconnect_manager"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Resumen">
+                            <field name="uuid" readonly="1"/>
+                            <field name="estado" readonly="1"/>
+                            <field name="sn" readonly="1"/>
+                            <field name="terminal_name" readonly="1"/>
+                            <field name="pin" readonly="1"/>
+                            <field name="table" readonly="1"/>
+                        </group>
+                        <group string="Detalles">
+                            <field name="event_time" readonly="1"/>
+                            <field name="attempt" readonly="1"/>
+                            <field name="last_status_code" readonly="1"/>
+                            <field name="next_retry_at" readonly="1"/>
+                            <field name="expires_at" readonly="1"/>
+                            <field name="created_at" readonly="1"/>
+                        </group>
+                    </group>
+                    <separator string="Último error"/>
+                    <field name="last_error" readonly="1"/>
+                    <separator string="Payload"/>
+                    <field name="payload" readonly="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_apiconnect_webhook_retry_search" model="ir.ui.view">
+        <field name="name">api.connect.webhook.retry.search</field>
+        <field name="model">api.connect.webhook.retry</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="pin"/>
+                <field name="sn"/>
+                <field name="terminal_name"/>
+                <filter string="Pendientes" name="estado_vivo" domain="[('estado', '=', 'vivo')]"/>
+                <filter string="En dead-letter" name="estado_muerto" domain="[('estado', '=', 'muerto')]"/>
+                <filter string="Reprocesadas" name="estado_reprocesado" domain="[('estado', '=', 'reprocesado')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_apiconnect_webhook_retry" model="ir.actions.act_window">
+        <field name="name">Webhooks fallidos</field>
+        <field name="res_model">api.connect.webhook.retry</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
     <record id="view_apiconnect_event_list" model="ir.ui.view">
         <field name="name">api.connect.event.list</field>
         <field name="model">api.connect.event</field>
@@ -342,5 +423,6 @@
     <menuitem id="menu_apiconnect_terminal" name="Terminales" parent="menu_apiconnect_root" action="action_apiconnect_terminal" sequence="10"/>
     <menuitem id="menu_apiconnect_terminal_group" name="Grupos de terminales" parent="menu_apiconnect_root" action="action_apiconnect_terminal_group" sequence="15" groups="api_connect.group_apiconnect_manager"/>
     <menuitem id="menu_apiconnect_event" name="Marcaciones recibidas" parent="menu_apiconnect_root" action="action_apiconnect_event" sequence="20"/>
+    <menuitem id="menu_apiconnect_retries" name="Webhooks fallidos" parent="menu_apiconnect_root" action="action_apiconnect_webhook_retry" sequence="25" groups="api_connect.group_apiconnect_manager"/>
     <menuitem id="menu_apiconnect_config" name="Configuración" parent="menu_apiconnect_root" action="action_apiconnect_config" sequence="30" groups="api_connect.group_apiconnect_manager"/>
 </odoo>
