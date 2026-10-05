@@ -236,3 +236,8 @@ docker compose up -d
 - Las terminales Hikvision requieren Device ID / Device Key para crearse.
 - El módulo no incluye secretos ni credenciales: todo se configura en la base
   de datos tras la instalación.
+- **Actualización del icono**: los navegadores cachean los assets estáticos
+  de Odoo. Para actualizar el icono del módulo se usa un nombre de archivo
+  versionado (actualmente `icon2.png`, declarado en el manifest con la clave
+  `icon` y en el `web_icon` del menú raíz). Al cambiar el icono: copia el PNG
+  nuevo con otro nombre (ej. `icon3.png`) y actualiza el manifest y el menú.

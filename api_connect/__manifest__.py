@@ -8,11 +8,12 @@ Gestión desde Odoo de terminales de control de acceso conectados a API Connect:
 - Recepción de marcaciones por webhook en hr.attendance (idempotente)
 """,
     "author": "RentIP Solution",
-    "website": "https://rentipsolution.com",
+    "website": "https://api-connect.rentipsolution.com",
     "category": "Human Resources/Connectors",
-    "version": "18.0.4.2.0",
+    "version": "18.0.4.3.0",
     "license": "LGPL-3",
     "depends": ["hr", "hr_attendance"],
+    "icon": "static/description/icon2.png",
     "data": [
         "security/api_connect_security.xml",
         "security/ir.model.access.csv",
