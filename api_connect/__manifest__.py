@@ -10,10 +10,9 @@ Gestión desde Odoo de terminales de control de acceso conectados a API Connect:
     "author": "RentIP Solution",
     "website": "https://api-connect.rentipsolution.com",
     "category": "Human Resources/Connectors",
-    "version": "18.0.4.3.0",
+    "version": "18.0.4.4.0",
     "license": "LGPL-3",
     "depends": ["hr", "hr_attendance"],
-    "icon": "static/description/icon2.png",
     "data": [
         "security/api_connect_security.xml",
         "security/ir.model.access.csv",
