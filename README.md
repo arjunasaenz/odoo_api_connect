@@ -1,5 +1,7 @@
 # API Connect — Módulo Odoo (Odoo 18)
 
+![API Connect](api_connect/static/description/icon.png)
+
 Módulo Odoo **oficial** que conecta con la API REST de **API Connect**
 (https://api-connect.rentipsolution.com) para gestionar terminales de control
 de acceso **ZKTeco / Hikvision** desde Odoo y recibir las **marcaciones en

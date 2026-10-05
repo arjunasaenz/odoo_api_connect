@@ -401,7 +401,7 @@
         <field name="view_mode">list</field>
     </record>
 
-    <menuitem id="menu_apiconnect_root" name="API Connect" sequence="70" groups="api_connect.group_apiconnect_user"/>
+    <menuitem id="menu_apiconnect_root" name="API Connect" sequence="70" web_icon="api_connect,static/description/icon.png" groups="api_connect.group_apiconnect_user"/>
 
     <record id="action_server_bulk_register" model="ir.actions.server">
         <field name="name">API Connect: Alta masiva en terminales</field>
